@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { getAuthTokenFromHeader } from "../../utils";
 import jwt from "jsonwebtoken";
-import { User } from "../types/custom";
+import type { User } from "../types/custom";
 
 // Express.Request is augmented via types elsewhere, so TS knows req.user can exist.
 

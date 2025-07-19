@@ -1,20 +1,27 @@
 
 import express from "express";
-// import exampleRouter from "./example";
-// import authRouter from "./auth";
-// import userRouter from "./user";
-// import databaseRouter from "./database";
-// import artifactRouter from "./artifact";
-// import collectionRouter from "./collection";
+import exampleRouter from "./example";
+import authRouter from "./auth";
+import userRouter from "./user";
+import databaseRouter from "./database";
+import artifactRouter from "./artifact";
+import collectionRouter from "./collection";
 
 const router = express.Router();
 
-// router.use("/example", exampleRouter);
-// router.use("/auth", authRouter);
-// router.use("/user", userRouter);
-// router.use("/database", databaseRouter);
-// router.use("/artifact", artifactRouter);
-// router.use("/collection", collectionRouter);
+router.use("/example", exampleRouter);
+router.use("/auth", authRouter);
+router.use("/user", userRouter);
+router.use("/database", databaseRouter);
+router.use("/artifact", artifactRouter);
+router.use("/collection", collectionRouter);
+router.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
+router.get("*", (req, res) => {
+  res.status(404).send("Not Found");
+});
 
 router.get("/", (req, res) => {
   res.send(

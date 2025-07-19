@@ -1,2 +1,33 @@
 @import "tailwindcss";
-@tailwind utilities;
+
+:root {
+  /* Custom colors */
+  --color-primary: #0066b2;
+  --color-secondary: #40e0d0;
+  --color-background: #000000;
+  --color-foreground: #ebecee;
+  --color-front: #ffffff;
+  --color-back: #000000;
+}
+
+/* Custom utilities */
+@layer utilities {
+  .text-primary {
+    color: var(--color-primary);
+  }
+  .text-secondary {
+    color: var(--color-secondary);
+  }
+  .text-foreground {
+    color: var(--color-foreground);
+  }
+  .text-back {
+    color: var(--color-back);
+  }
+  .bg-background {
+    background-color: var(--color-background);
+  }
+  .bg-front {
+    background-color: var(--color-front);
+  }
+}
