@@ -1,22 +1,18 @@
 import express from "express";
 import exampleRouter from "./example";
 import testAuthRouter from "./test-auth";
+import artifactRouter from "./artifact";
+import databaseRouter from "./database";
+import collectionRouter from "./collection";
 import { prisma, connectWithRetry } from "../../db";
-// import authRouter from "./auth";
-// import userRouter from "./user";
-// import databaseRouter from "./database";
-// import artifactRouter from "./artifact";
-// import collectionRouter from "./collection";
 
 const router = express.Router();
 
 router.use("/example", exampleRouter);
 router.use("/test-auth", testAuthRouter);
-// router.use("/auth", authRouter);
-// router.use("/user", userRouter);
-// router.use("/database", databaseRouter);
-// router.use("/artifact", artifactRouter);
-// router.use("/collection", collectionRouter);
+router.use("/artifact", artifactRouter);
+router.use("/database", databaseRouter);
+router.use("/collection", collectionRouter);
 
 router.get("/health", (req, res) => {
   res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
