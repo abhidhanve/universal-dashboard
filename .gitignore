@@ -11,5 +11,19 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Environment files
 .env
+.env.*
 *.env
+*.env.*
+app.env
+
+# Specific environment files
+server/.env
+server/.env.*
+client/.env
+client/.env.*
+services/*/app.env
+services/*/.env
+services/*/.env.*
