@@ -187,7 +187,30 @@ export class ExternalDatabaseService {
         console.error('  Headers:', error.response?.headers);
         console.error('  Request URL:', error.config?.url);
         console.error('  Request Data:', error.config?.data);
-        throw new Error(`Schema analysis failed: ${error.response?.data?.message || error.message}`);
+        
+        // Parse MongoDB errors and provide user-friendly messages
+        const errorData = error.response?.data;
+        let userFriendlyMessage = 'Schema analysis failed';
+        
+        if (errorData?.error) {
+          const errorMsg = errorData.error.toLowerCase();
+          
+          if (errorMsg.includes('auth error') || errorMsg.includes('authentication failed') || errorMsg.includes('bad auth')) {
+            userFriendlyMessage = 'MongoDB authentication failed. Please check your username and password in the connection URL';
+          } else if (errorMsg.includes('connection') || errorMsg.includes('connect')) {
+            userFriendlyMessage = 'Cannot connect to MongoDB. Please verify your connection URL and network access';
+          } else if (errorMsg.includes('database') && errorMsg.includes('not found')) {
+            userFriendlyMessage = 'The specified database was not found. Please check the database name';
+          } else if (errorMsg.includes('collection') && errorMsg.includes('not found')) {
+            userFriendlyMessage = 'The specified collection was not found. Please check the collection name';
+          } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+            userFriendlyMessage = 'Connection timeout. Please check your network connection and MongoDB availability';
+          } else {
+            userFriendlyMessage = errorData.error || 'MongoDB connection error occurred';
+          }
+        }
+        
+        throw new Error(userFriendlyMessage);
       }
       console.error('  Non-Axios Error:', error);
       throw error;
@@ -216,7 +239,27 @@ export class ExternalDatabaseService {
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(`Data insertion failed: ${error.response?.data?.message || error.message}`);
+        // Parse MongoDB errors for user-friendly messages
+        const errorData = error.response?.data;
+        let userFriendlyMessage = 'Data insertion failed';
+        
+        if (errorData?.error) {
+          const errorMsg = errorData.error.toLowerCase();
+          
+          if (errorMsg.includes('auth error') || errorMsg.includes('authentication failed') || errorMsg.includes('bad auth')) {
+            userFriendlyMessage = 'MongoDB authentication failed. Please check your credentials';
+          } else if (errorMsg.includes('connection') || errorMsg.includes('connect')) {
+            userFriendlyMessage = 'Cannot connect to MongoDB. Please verify your connection';
+          } else if (errorMsg.includes('validation') || errorMsg.includes('invalid')) {
+            userFriendlyMessage = 'Data validation failed. Please check your input data format';
+          } else if (errorMsg.includes('duplicate')) {
+            userFriendlyMessage = 'Duplicate entry detected. This record may already exist';
+          } else {
+            userFriendlyMessage = errorData.error || 'Data insertion error occurred';
+          }
+        }
+        
+        throw new Error(userFriendlyMessage);
       }
       throw error;
     }
@@ -251,7 +294,27 @@ export class ExternalDatabaseService {
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(`Data retrieval failed: ${error.response?.data?.message || error.message}`);
+        // Parse MongoDB errors for user-friendly messages
+        const errorData = error.response?.data;
+        let userFriendlyMessage = 'Data retrieval failed';
+        
+        if (errorData?.error) {
+          const errorMsg = errorData.error.toLowerCase();
+          
+          if (errorMsg.includes('auth error') || errorMsg.includes('authentication failed') || errorMsg.includes('bad auth')) {
+            userFriendlyMessage = 'MongoDB authentication failed. Please check your credentials';
+          } else if (errorMsg.includes('connection') || errorMsg.includes('connect')) {
+            userFriendlyMessage = 'Cannot connect to MongoDB. Please verify your connection';
+          } else if (errorMsg.includes('database') && errorMsg.includes('not found')) {
+            userFriendlyMessage = 'Database not found. Please check the database name';
+          } else if (errorMsg.includes('collection') && errorMsg.includes('not found')) {
+            userFriendlyMessage = 'Collection not found. Please check the collection name';
+          } else {
+            userFriendlyMessage = errorData.error || 'Data retrieval error occurred';
+          }
+        }
+        
+        throw new Error(userFriendlyMessage);
       }
       throw error;
     }
