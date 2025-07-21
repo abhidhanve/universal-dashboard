@@ -33,7 +33,7 @@ interface DataInsertRequest {
 
 interface DataInsertResponse {
   success: boolean;
-  insertedId: string;
+  documentId: string;
   message: string;
 }
 
@@ -143,7 +143,7 @@ export class ExternalDatabaseService {
       const result = response.data;
       return {
         success: true,
-        insertedId: result.document_id || result.inserted_id || 'unknown',
+        documentId: result.document_id || result.inserted_id || 'unknown',
         message: result.message || 'Data inserted successfully'
       };
     } catch (error) {
