@@ -288,6 +288,83 @@ export class ExternalDatabaseService {
       throw error;
     }
   }
+
+  /**
+   * Add new fields to schema
+   */
+  async addSchemaFields(request: {
+    databaseName: string;
+    collectionName: string;
+    newFields: Record<string, any>;
+  }): Promise<any> {
+    try {
+      // For now, we'll just return success since MongoDB is schema-less
+      // The new fields will be automatically accepted when documents are inserted
+      console.log('Adding schema fields:', request.newFields, 'to', request.databaseName, request.collectionName);
+      
+      return {
+        message: `Schema fields can be added to collection '${request.collectionName}'. MongoDB will accept new fields when documents are inserted/updated.`,
+        success: true
+      };
+      
+      // TODO: Uncomment when Go service schema endpoints are fixed
+      // const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/add-schema-fields`, {
+      //   database_name: request.databaseName,
+      //   collection_name: request.collectionName,
+      //   new_fields: request.newFields
+      // }, {
+      //   headers: {
+      //     'Content-Type': 'application/json'
+      //   },
+      //   timeout: 10000 // 10 second timeout for schema modification
+      // });
+
+      // return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Schema field addition failed: ${error.response?.data?.message || error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Remove field from schema
+   */
+  async removeSchemaField(request: {
+    databaseName: string;
+    collectionName: string;
+    fieldName: string;
+  }): Promise<any> {
+    try {
+      // For now, we'll simulate the field removal without calling the Go service
+      console.log('Removing schema field:', request.fieldName, 'from', request.databaseName, request.collectionName);
+      
+      return {
+        message: `Field '${request.fieldName}' would be removed from collection '${request.collectionName}'. Note: This is currently a simulation.`,
+        success: true
+      };
+      
+      // TODO: Uncomment when Go service schema endpoints are fixed
+      // const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/remove-schema-field`, {
+      //   database_name: request.databaseName,
+      //   collection_name: request.collectionName,
+      //   field_name: request.fieldName
+      // }, {
+      //   headers: {
+      //     'Content-Type': 'application/json'
+      //   },
+      //   timeout: 10000 // 10 second timeout for schema modification
+      // });
+
+      // return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Schema field removal failed: ${error.response?.data?.message || error.message}`);
+      }
+      throw error;
+    }
+  }
 }
 
 export default ExternalDatabaseService.getInstance();

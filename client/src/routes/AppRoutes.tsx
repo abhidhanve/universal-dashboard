@@ -10,6 +10,7 @@ import DashboardPage from '../pages/DashboardPage';
 import ProjectsPage from '../pages/ProjectsPage';
 import ProjectDetailPage from '../pages/ProjectDetailPage';
 import ClientAccessPage from '../pages/ClientAccessPage';
+import ProfilePage from '../pages/ProfilePage';
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,11 +44,12 @@ const AppRoutes: React.FC = () => {
           isAuthenticated ? (
             <DashboardLayout>
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/" element={<Navigate to="/projects" replace />} />
+                <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="*" element={<Navigate to="/projects" replace />} />
               </Routes>
             </DashboardLayout>
           ) : (

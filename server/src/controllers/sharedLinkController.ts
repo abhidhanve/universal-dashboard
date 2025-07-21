@@ -103,6 +103,62 @@ export class SharedLinkController {
   }
 
   /**
+   * Delete a shared link (revoke access)
+   * DELETE /api/projects/:id/links/:linkId
+   */
+  static async deleteSharedLink(req: Request, res: Response) {
+    try {
+      const { id, linkId } = req.params;
+      const developerId = req.developer?.id;
+
+      if (!developerId) {
+        return res.status(401).json({ error: 'Developer authentication required' });
+      }
+
+      const project = await authDb.getProjectById(id);
+
+      if (!project) {
+        return res.status(404).json({
+          error: 'Project not found',
+          message: 'No project found with the specified ID'
+        });
+      }
+
+      // Verify ownership
+      if (project.developerId !== developerId) {
+        return res.status(403).json({
+          error: 'Access denied',
+          message: 'You can only delete shared links for your own projects'
+        });
+      }
+
+      // Check if the shared link exists and belongs to this project
+      const sharedLinks = await authDb.getSharedLinksByProject(id);
+      const linkToDelete = sharedLinks.find(link => link.id === linkId);
+
+      if (!linkToDelete) {
+        return res.status(404).json({
+          error: 'Shared link not found',
+          message: 'No shared link found with the specified ID for this project'
+        });
+      }
+
+      await authDb.deleteSharedLink(linkId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Shared link deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete shared link error:', error);
+      res.status(500).json({
+        error: 'Failed to delete shared link',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
    * Disable/enable a shared link
    * PUT /api/shared-links/:token
    */
@@ -356,6 +412,152 @@ export class SharedLinkController {
       console.error('Client data deletion error:', error);
       res.status(500).json({
         error: 'Data deletion failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Add new fields to schema via shared link
+   * PUT /api/shared/:token/schema
+   */
+  static async addSchemaFields(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+      const { newFields } = req.body;
+
+      if (!newFields || typeof newFields !== 'object') {
+        return res.status(400).json({
+          error: 'Invalid request',
+          message: 'New fields object is required'
+        });
+      }
+
+      // Get shared link information
+      const sharedLink = await authDb.getSharedLinkByToken(token);
+      if (!sharedLink) {
+        return res.status(404).json({
+          error: 'Shared link not found',
+          message: 'Invalid or expired shared link'
+        });
+      }
+
+      // Check permissions
+      if (!sharedLink.permissions?.canModifySchema) {
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'Schema modification not allowed for this shared link'
+        });
+      }
+
+      // Get project information
+      const project = await authDb.getProjectById(sharedLink.projectId);
+      if (!project) {
+        return res.status(404).json({
+          error: 'Project not found',
+          message: 'Associated project not found'
+        });
+      }
+
+      // Add fields to schema via external database service
+      const result = await externalDatabaseService.addSchemaFields({
+        databaseName: project.databaseName,
+        collectionName: project.collectionName,
+        newFields
+      });
+
+      // Update the project's schema data in the database to persist changes
+      const updatedSchemaData = {
+        ...project.schemaData,
+        ...newFields
+      };
+
+      await authDb.updateProject(sharedLink.projectId, { schemaData: updatedSchemaData });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Schema fields added successfully'
+      });
+    } catch (error) {
+      console.error('Schema field addition error:', error);
+      res.status(500).json({
+        error: 'Schema modification failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Remove field from schema via shared link
+   * DELETE /api/shared/:token/schema/:fieldName
+   */
+  static async removeSchemaField(req: Request, res: Response) {
+    try {
+      const { token, fieldName } = req.params;
+
+      if (!fieldName) {
+        return res.status(400).json({
+          error: 'Invalid request',
+          message: 'Field name is required'
+        });
+      }
+
+      if (fieldName === '_id') {
+        return res.status(400).json({
+          error: 'Invalid operation',
+          message: 'Cannot remove the _id field'
+        });
+      }
+
+      // Get shared link information
+      const sharedLink = await authDb.getSharedLinkByToken(token);
+      if (!sharedLink) {
+        return res.status(404).json({
+          error: 'Shared link not found',
+          message: 'Invalid or expired shared link'
+        });
+      }
+
+      // Check permissions
+      if (!sharedLink.permissions?.canModifySchema) {
+        return res.status(403).json({
+          error: 'Permission denied',
+          message: 'Schema modification not allowed for this shared link'
+        });
+      }
+
+      // Get project information
+      const project = await authDb.getProjectById(sharedLink.projectId);
+      if (!project) {
+        return res.status(404).json({
+          error: 'Project not found',
+          message: 'Associated project not found'
+        });
+      }
+
+      // Remove field from schema via external database service
+      const result = await externalDatabaseService.removeSchemaField({
+        databaseName: project.databaseName,
+        collectionName: project.collectionName,
+        fieldName
+      });
+
+      // Update the project's schema data in the database to persist changes
+      const updatedSchemaData = { ...project.schemaData };
+      delete updatedSchemaData[fieldName];
+
+      await authDb.updateProject(sharedLink.projectId, { schemaData: updatedSchemaData });
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: `Field '${fieldName}' removed successfully`
+      });
+    } catch (error) {
+      console.error('Schema field removal error:', error);
+      res.status(500).json({
+        error: 'Schema field removal failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }

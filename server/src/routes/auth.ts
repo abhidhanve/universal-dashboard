@@ -77,4 +77,9 @@ router.get('/profile', authenticateJWT, async (req, res) => {
   await authController.getProfile(req, res);
 });
 
+// PUT /auth/profile - Update developer profile
+router.put('/profile', authenticateJWT, async (req, res) => {
+  await authController.updateProfile(req, res);
+});
+
 export default router;

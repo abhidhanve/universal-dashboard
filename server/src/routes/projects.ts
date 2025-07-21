@@ -23,5 +23,6 @@ router.delete('/:id', ProjectController.deleteProject);   // Delete project
 // Shared link management - Complete Workflow Step 3  
 router.post('/:id/share', SharedLinkController.createSharedLink);  // Generate client access token
 router.get('/:id/links', SharedLinkController.getSharedLinks);     // View all shared links
+router.delete('/:id/links/:linkId', SharedLinkController.deleteSharedLink); // Delete/revoke shared link
 
 export default router;

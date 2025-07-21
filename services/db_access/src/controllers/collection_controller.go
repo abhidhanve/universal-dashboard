@@ -186,3 +186,41 @@ func (ctrl *CollectionController) Method3DataDelete(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// Method3AddSchemaFields handles adding new fields to schema using external MongoDB URI (Method 3)
+func (ctrl *CollectionController) Method3AddSchemaFields(c *gin.Context) {
+	var req models.Method3SchemaModificationRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.SendValidationError(c, err.Error())
+		return
+	}
+
+	// Call service layer for Method 3 schema field addition
+	response, err := ctrl.collectionService.Method3AddSchemaFields(req)
+	if err != nil {
+		utils.SendInternalError(c, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// Method3RemoveSchemaField handles removing a field from schema using external MongoDB URI (Method 3)
+func (ctrl *CollectionController) Method3RemoveSchemaField(c *gin.Context) {
+	var req models.Method3SchemaFieldRemovalRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.SendValidationError(c, err.Error())
+		return
+	}
+
+	// Call service layer for Method 3 schema field removal
+	response, err := ctrl.collectionService.Method3RemoveSchemaField(req)
+	if err != nil {
+		utils.SendInternalError(c, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

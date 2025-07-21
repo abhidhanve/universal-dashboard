@@ -289,6 +289,27 @@ class AuthDatabase {
     `;
   }
 
+  async updateDeveloper(id: string, updateData: { name?: string }): Promise<Developer | null> {
+    const { name } = updateData;
+    
+    if (!name) {
+      throw new Error('No update data provided');
+    }
+
+    const [result] = await sql`
+      UPDATE developers 
+      SET name = ${name}, updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    if (!result) {
+      return null;
+    }
+
+    return this.mapDeveloperRow(result);
+  }
+
   private mapDeveloperRow(row: any): Developer {
     return {
       id: row.id,

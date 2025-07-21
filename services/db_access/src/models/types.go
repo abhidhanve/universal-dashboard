@@ -239,3 +239,23 @@ var DefaultContextConfig = ContextConfig{
 	MediumTimeout: 30 * time.Second,
 	LongTimeout:   60 * time.Second,
 }
+
+// Schema modification request for adding fields
+type Method3SchemaModificationRequest struct {
+	DatabaseName   string                 `json:"database_name" binding:"required"`
+	CollectionName string                 `json:"collection_name" binding:"required"`
+	NewFields      map[string]interface{} `json:"new_fields" binding:"required"`
+}
+
+// Schema field removal request
+type Method3SchemaFieldRemovalRequest struct {
+	DatabaseName   string `json:"database_name" binding:"required"`
+	CollectionName string `json:"collection_name" binding:"required"`
+	FieldName      string `json:"field_name" binding:"required"`
+}
+
+// Schema modification response
+type Method3SchemaModificationResponse struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
+}

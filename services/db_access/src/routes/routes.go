@@ -69,6 +69,8 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/method3/data-insert", collectionController.Method3DataInsert)
 	router.POST("/method3/data-get", collectionController.Method3DataGet)
 	router.POST("/method3/data-delete", collectionController.Method3DataDelete)
+	router.POST("/method3/add-schema-fields", collectionController.Method3AddSchemaFields)
+	router.POST("/method3/remove-schema-field", collectionController.Method3RemoveSchemaField)
 
 	// === DOCUMENT OPERATIONS ===
 	// CRUD operations for documents

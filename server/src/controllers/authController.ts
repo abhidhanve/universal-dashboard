@@ -127,4 +127,41 @@ export class AuthController {
       res.status(500).json(response);
     }
   }
+
+  /**
+   * Update developer profile
+   * PUT /auth/profile
+   */
+  async updateProfile(req: Request, res: Response): Promise<void> {
+    try {
+      const developer = req.developer;
+      if (!developer) {
+        const response = ResponseFormatter.error('Developer not found', 'DEVELOPER_NOT_FOUND');
+        res.status(404).json(response);
+        return;
+      }
+
+      const { name } = req.body;
+
+      if (!name || typeof name !== 'string' || !name.trim()) {
+        const response = ResponseFormatter.error('Name is required', 'VALIDATION_ERROR');
+        res.status(400).json(response);
+        return;
+      }
+
+      const updatedDeveloper = await this.authService.updateProfile(developer.id, {
+        name: name.trim()
+      });
+
+      const response = ResponseFormatter.success({ developer: updatedDeveloper }, 'Profile updated successfully');
+      res.json(response);
+
+    } catch (error) {
+      const response = ResponseFormatter.error(
+        error instanceof Error ? error.message : 'Failed to update profile',
+        'PROFILE_UPDATE_ERROR'
+      );
+      res.status(500).json(response);
+    }
+  }
 }

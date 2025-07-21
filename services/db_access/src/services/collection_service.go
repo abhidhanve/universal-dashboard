@@ -516,3 +516,90 @@ func (s *CollectionService) Method3DeleteData(req models.Method3DataRequest) (*m
 		Code:         0,
 	}, nil
 }
+
+// Method3AddSchemaFields adds new fields to a collection's schema using external MongoDB URI
+func (s *CollectionService) Method3AddSchemaFields(req models.Method3SchemaModificationRequest) (*models.Method3SchemaModificationResponse, error) {
+	if req.DatabaseName == "" {
+		return nil, fmt.Errorf("database name is required")
+	}
+	if req.CollectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+	if req.NewFields == nil || len(req.NewFields) == 0 {
+		return nil, fmt.Errorf("new fields are required")
+	}
+
+	// Connect to external MongoDB using Method 3
+	client, err := mongodb.ConnectWithURI("mongodb+srv://abhidhanve:z4dJr5ZGGqBGE3QL@cluster0.whtrr4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to external MongoDB: %v", err)
+	}
+	defer client.Disconnect(context.TODO())
+
+	// Get the collection
+	collection := client.Database(req.DatabaseName).Collection(req.CollectionName)
+
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), models.DefaultContextConfig.MediumTimeout)
+	defer cancel()
+
+	// For MongoDB, we don't modify the schema directly since it's schema-less
+	// Instead, we can add sample documents with the new fields set to null
+	// Or simply return success since adding fields to a document doesn't require schema changes
+	// MongoDB will automatically accept new fields when documents are inserted/updated
+
+	// We'll just validate that the collection exists
+	count, err := collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to access collection: %v", err)
+	}
+
+	return &models.Method3SchemaModificationResponse{
+		Message: fmt.Sprintf("Schema fields can be added to collection '%s' (contains %d documents). MongoDB will accept new fields when documents are inserted/updated.", req.CollectionName, count),
+		Success: true,
+	}, nil
+}
+
+// Method3RemoveSchemaField removes a field from a collection's documents using external MongoDB URI
+func (s *CollectionService) Method3RemoveSchemaField(req models.Method3SchemaFieldRemovalRequest) (*models.Method3SchemaModificationResponse, error) {
+	if req.DatabaseName == "" {
+		return nil, fmt.Errorf("database name is required")
+	}
+	if req.CollectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+	if req.FieldName == "" {
+		return nil, fmt.Errorf("field name is required")
+	}
+	if req.FieldName == "_id" {
+		return nil, fmt.Errorf("cannot remove the _id field")
+	}
+
+	// Connect to external MongoDB using Method 3
+	client, err := mongodb.ConnectWithURI("mongodb+srv://abhidhanve:z4dJr5ZGGqBGE3QL@cluster0.whtrr4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to external MongoDB: %v", err)
+	}
+	defer client.Disconnect(context.TODO())
+
+	// Get the collection
+	collection := client.Database(req.DatabaseName).Collection(req.CollectionName)
+
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), models.DefaultContextConfig.LongTimeout)
+	defer cancel()
+
+	// Remove the field from all documents in the collection
+	filter := bson.M{req.FieldName: bson.M{"$exists": true}}
+	update := bson.M{"$unset": bson.M{req.FieldName: ""}}
+
+	result, err := collection.UpdateMany(ctx, filter, update)
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove field from documents: %v", err)
+	}
+
+	return &models.Method3SchemaModificationResponse{
+		Message: fmt.Sprintf("Field '%s' removed from %d documents in collection '%s'", req.FieldName, result.ModifiedCount, req.CollectionName),
+		Success: true,
+	}, nil
+}

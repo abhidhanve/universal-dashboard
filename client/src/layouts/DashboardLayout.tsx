@@ -24,7 +24,7 @@ import {
   Menu as MenuIcon,
   AccountCircle,
   Logout,
-  Settings,
+  Person,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -65,11 +65,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   const menuItems = [
     {
-      text: 'Dashboard',
-      icon: <DashboardIcon />,
-      path: '/dashboard',
-    },
-    {
       text: 'Projects',
       icon: <ProjectsIcon />,
       path: '/projects',
@@ -79,14 +74,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const drawer = (
     <Box>
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-          Universal Panel
+        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          🚀 Universal Panel
         </Typography>
       </Toolbar>
       <Divider />
-      <List sx={{ px: 1 }}>
+      <List sx={{ px: 1, pt: 2 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+          <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
             <ListItemButton
               onClick={() => {
                 navigate(item.path);
@@ -94,7 +89,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               }}
               selected={location.pathname === item.path}
               sx={{
-                borderRadius: 2,
+                borderRadius: 3,
+                py: 1.5,
+                px: 2,
                 '&.Mui-selected': {
                   backgroundColor: theme.palette.primary.main + '15',
                   color: theme.palette.primary.main,
@@ -102,10 +99,27 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     color: theme.palette.primary.main,
                   },
                 },
+                '&:hover': {
+                  backgroundColor: theme.palette.action.hover,
+                },
               }}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemIcon
+                sx={{
+                  minWidth: 40,
+                  color: location.pathname === item.path ? 'inherit' : 'text.secondary',
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.text} 
+                sx={{ 
+                  '& .MuiListItemText-primary': { 
+                    fontWeight: location.pathname === item.path ? 600 : 400 
+                  } 
+                }} 
+              />
             </ListItemButton>
           </ListItem>
         ))}
@@ -170,17 +184,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         onClose={handleProfileMenuClose}
         onClick={handleProfileMenuClose}
       >
-        <MenuItem>
+        <MenuItem onClick={() => { navigate('/profile'); handleProfileMenuClose(); }}>
           <ListItemIcon>
-            <AccountCircle fontSize="small" />
+            <Person fontSize="small" />
           </ListItemIcon>
           Profile
-        </MenuItem>
-        <MenuItem>
-          <ListItemIcon>
-            <Settings fontSize="small" />
-          </ListItemIcon>
-          Settings
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>

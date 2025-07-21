@@ -183,6 +183,28 @@ export class AuthService {
   }
 
   /**
+   * Update developer profile
+   */
+  async updateProfile(developerId: string, updateData: { name: string }): Promise<Omit<Developer, 'password'>> {
+    // Get the developer first to ensure it exists
+    const developer = await authDb.getDeveloperById(developerId);
+    if (!developer) {
+      throw new Error('Developer not found');
+    }
+
+    // Update the profile
+    const updatedDeveloper = await authDb.updateDeveloper(developerId, {
+      name: updateData.name
+    });
+
+    if (!updatedDeveloper) {
+      throw new Error('Failed to update developer profile');
+    }
+
+    return this.sanitizeDeveloper(updatedDeveloper);
+  }
+
+  /**
    * Generate JWT token
    */
   private generateToken(developer: Developer): string {

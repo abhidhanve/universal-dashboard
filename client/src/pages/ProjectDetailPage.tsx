@@ -24,7 +24,8 @@ import {
 import { 
   Share, 
   ContentCopy, 
-  Edit
+  Edit,
+  Delete
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -69,8 +70,8 @@ export default function ProjectDetailPage() {
   const [permissions, setPermissions] = useState({
     canInsert: true,
     canView: true,
-    canDelete: false,
-    canModifySchema: false
+    canDelete: true,  // Enable delete by default for testing
+    canModifySchema: true  // Enable schema modification by default for testing
   });
   const [expiresIn, setExpiresIn] = useState<number>(7);
 
@@ -129,6 +130,21 @@ export default function ProjectDetailPage() {
     },
   });
 
+  // Delete shared link mutation
+  const deleteSharedLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const response = await api.delete(`/projects/${projectId}/links/${linkId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shared-links', projectId] });
+      toast.success('Shared link deleted successfully!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to delete shared link');
+    },
+  });
+
   const copyToClipboard = (token: string) => {
     const shareUrl = `${window.location.origin}/access/${token}`;
     navigator.clipboard.writeText(shareUrl);
@@ -137,6 +153,12 @@ export default function ProjectDetailPage() {
 
   const handleCreateSharedLink = () => {
     createSharedLinkMutation.mutate({ permissions, expiresIn });
+  };
+
+  const handleDeleteSharedLink = (linkId: string, token: string) => {
+    if (window.confirm(`Are you sure you want to revoke access for token ${token.substring(0, 10)}...?`)) {
+      deleteSharedLinkMutation.mutate(linkId);
+    }
   };
 
   if (isLoadingProject) {
@@ -290,12 +312,23 @@ export default function ProjectDetailPage() {
                     mb: 1
                   }}
                   secondaryAction={
-                    <IconButton
-                      edge="end"
-                      onClick={() => copyToClipboard(link.token)}
-                    >
-                      <ContentCopy />
-                    </IconButton>
+                    <Stack direction="row" spacing={1}>
+                      <IconButton
+                        edge="end"
+                        onClick={() => copyToClipboard(link.token)}
+                        title="Copy link to clipboard"
+                      >
+                        <ContentCopy />
+                      </IconButton>
+                      <IconButton
+                        edge="end"
+                        onClick={() => handleDeleteSharedLink(link.id, link.token)}
+                        color="error"
+                        title="Delete/Revoke this link"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Stack>
                   }
                 >
                   <ListItemText
@@ -350,7 +383,14 @@ export default function ProjectDetailPage() {
                       onChange={(e) => setPermissions(prev => ({ ...prev, canView: e.target.checked }))}
                     />
                   }
-                  label="Can View"
+                  label={
+                    <Box>
+                      <Typography variant="body2">Can View Data</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow viewing and browsing existing data
+                      </Typography>
+                    </Box>
+                  }
                 />
                 <FormControlLabel
                   control={
@@ -359,7 +399,46 @@ export default function ProjectDetailPage() {
                       onChange={(e) => setPermissions(prev => ({ ...prev, canInsert: e.target.checked }))}
                     />
                   }
-                  label="Can Insert"
+                  label={
+                    <Box>
+                      <Typography variant="body2">Can Insert Data</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow submitting new data entries
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={permissions.canDelete}
+                      onChange={(e) => setPermissions(prev => ({ ...prev, canDelete: e.target.checked }))}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2">Can Delete Data</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow removing existing data entries
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={permissions.canModifySchema}
+                      onChange={(e) => setPermissions(prev => ({ ...prev, canModifySchema: e.target.checked }))}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body2">Can Modify Schema</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow adding/removing data fields
+                      </Typography>
+                    </Box>
+                  }
                 />
               </Stack>
               
