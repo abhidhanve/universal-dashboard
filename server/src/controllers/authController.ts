@@ -153,7 +153,7 @@ export class AuthController {
         name: name.trim()
       });
 
-      const response = ResponseFormatter.success({ developer: updatedDeveloper }, 'Profile updated successfully');
+      const response = ResponseFormatter.success(updatedDeveloper, 'Profile updated successfully');
       res.json(response);
 
     } catch (error) {

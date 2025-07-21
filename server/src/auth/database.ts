@@ -298,7 +298,7 @@ class AuthDatabase {
 
     const [result] = await sql`
       UPDATE developers 
-      SET name = ${name}, updated_at = NOW()
+      SET name = ${name}
       WHERE id = ${id}
       RETURNING *
     `;
