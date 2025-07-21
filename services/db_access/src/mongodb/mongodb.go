@@ -2,39 +2,24 @@ package mongodb
 
 import (
 	"context"
+	"log"
 	"reflect"
-	"sync"
 
-	"github.com/abhidhanve/universal-dashboard/services/db_access/configs"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var (
-	once     sync.Once
-	dbClient *mongo.Client
-)
+// ⚠️ SECURITY: Global MongoDB client removed for security reasons
+// All connections now managed by main server
 
 func GetClient() *mongo.Client {
-	once.Do(func() {
-		db_uri := configs.Env.Mongodb_URI
-
-		tM := reflect.TypeOf(bson.M{})
-		reg := bson.NewRegistryBuilder().RegisterTypeMapEntry(bsontype.EmbeddedDocument, tM).Build()
-		clientOptions := options.Client().ApplyURI(db_uri).SetRegistry(reg)
-
-		client, err := mongo.Connect(context.TODO(), clientOptions)
-
-		if err != nil {
-			return
-		}
-
-		dbClient = client
-	})
-
-	return dbClient
+	// ⚠️ SECURITY NOTICE: This function is deprecated for security reasons
+	// MongoDB credentials should not be stored in microservices environment
+	// Use ConnectWithURI() with URIs provided by main server instead
+	log.Fatal("GetClient() deprecated: MongoDB URIs should be provided by main server, not stored in microservice environment")
+	return nil
 }
 
 // ConnectWithURI connects to MongoDB using a custom URI (for Method 3)

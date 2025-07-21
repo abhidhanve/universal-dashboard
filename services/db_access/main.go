@@ -5,14 +5,13 @@ import (
 	"log"
 
 	"github.com/abhidhanve/universal-dashboard/services/db_access/configs"
-	"github.com/abhidhanve/universal-dashboard/services/db_access/src/mongodb"
 	"github.com/abhidhanve/universal-dashboard/services/db_access/src/routes"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var dbClient *mongo.Client
+// ⚠️ SECURITY: Global MongoDB client removed for security
+// All database connections now managed by main server
 
 func main() {
 	// Initialize environment configurations
@@ -31,11 +30,9 @@ func main() {
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	router.Use(cors.New(config))
 
-	// Initialize MongoDB client
-	dbClient = mongodb.GetClient()
-	if dbClient == nil {
-		log.Fatal("Failed to initialize MongoDB client")
-	}
+	// ⚠️ SECURITY: MongoDB client initialization removed
+	// All database connections now managed by main server for security
+	// Microservice only handles operations with URIs provided by main server
 
 	// Setup all routes using MVC architecture
 	routes.SetupRoutes(router)

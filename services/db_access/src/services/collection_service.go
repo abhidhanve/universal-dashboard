@@ -529,8 +529,13 @@ func (s *CollectionService) Method3AddSchemaFields(req models.Method3SchemaModif
 		return nil, fmt.Errorf("new fields are required")
 	}
 
-	// Connect to external MongoDB using Method 3
-	client, err := mongodb.ConnectWithURI("mongodb+srv://abhidhanve:z4dJr5ZGGqBGE3QL@cluster0.whtrr4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+	// ⚠️ SECURITY FIX: MongoDB URI should be provided by main server, not hardcoded
+	// This service should receive connection from main server that manages URIs securely
+	if req.MongoURI == "" {
+		return nil, fmt.Errorf("MongoDB URI must be provided by main server")
+	}
+
+	client, err := mongodb.ConnectWithURI(req.MongoURI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to external MongoDB: %v", err)
 	}
@@ -575,8 +580,13 @@ func (s *CollectionService) Method3RemoveSchemaField(req models.Method3SchemaFie
 		return nil, fmt.Errorf("cannot remove the _id field")
 	}
 
-	// Connect to external MongoDB using Method 3
-	client, err := mongodb.ConnectWithURI("mongodb+srv://abhidhanve:z4dJr5ZGGqBGE3QL@cluster0.whtrr4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+	// ⚠️ SECURITY FIX: MongoDB URI should be provided by main server, not hardcoded
+	// This service should receive connection from main server that manages URIs securely
+	if req.MongoURI == "" {
+		return nil, fmt.Errorf("MongoDB URI must be provided by main server")
+	}
+
+	client, err := mongodb.ConnectWithURI(req.MongoURI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to external MongoDB: %v", err)
 	}

@@ -242,6 +242,7 @@ var DefaultContextConfig = ContextConfig{
 
 // Schema modification request for adding fields
 type Method3SchemaModificationRequest struct {
+	MongoURI       string                 `json:"mongo_uri" binding:"required"`
 	DatabaseName   string                 `json:"database_name" binding:"required"`
 	CollectionName string                 `json:"collection_name" binding:"required"`
 	NewFields      map[string]interface{} `json:"new_fields" binding:"required"`
@@ -249,6 +250,7 @@ type Method3SchemaModificationRequest struct {
 
 // Schema field removal request
 type Method3SchemaFieldRemovalRequest struct {
+	MongoURI       string `json:"mongo_uri" binding:"required"`
 	DatabaseName   string `json:"database_name" binding:"required"`
 	CollectionName string `json:"collection_name" binding:"required"`
 	FieldName      string `json:"field_name" binding:"required"`

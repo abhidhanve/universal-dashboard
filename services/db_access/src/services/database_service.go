@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/abhidhanve/universal-dashboard/services/db_access/configs"
 	"github.com/abhidhanve/universal-dashboard/services/db_access/src/models"
 	"github.com/abhidhanve/universal-dashboard/services/db_access/src/mongodb"
 	"github.com/abhidhanve/universal-dashboard/services/db_access/src/utils"
@@ -136,19 +135,10 @@ func (s *DatabaseService) allocateWithUserCreation(req models.DatabaseAllocation
 		return nil, fmt.Errorf("failed to create user: %v", err)
 	}
 
-	// Build connection URI
-	mongoHostname := configs.Env.Mongodb_Hostname
-	uri := utils.BuildConnectionURI(mongoHostname, req.UserName, req.Password, req.DBName)
-
-	response := &models.DatabaseAllocationResponse{
-		Message:  fmt.Sprintf("User %s created for database %s", req.UserName, req.DBName),
-		Code:     0,
-		URI:      uri,
-		Database: req.DBName,
-		Username: req.UserName,
-	}
-
-	return response, nil
+	// ⚠️ SECURITY: This function is deprecated for security reasons
+	// Database user creation should be handled by main server, not microservices
+	// MongoDB hostname and credentials should not be stored in microservice environment
+	return nil, fmt.Errorf("database user creation deprecated: should be handled by main server for security")
 }
 
 // TestDatabaseConnection tests if a database is accessible

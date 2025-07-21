@@ -26,31 +26,122 @@ Universal Panel is a comprehensive full-stack application that enables developer
 - **Persistent Storage**: Dual database architecture (PostgreSQL + MongoDB)
 
 
+### Architecture Overview
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Universal Panel System                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐    ┌──────────────────┐    ┌─────────────────────────────┐
+│                  │    │                  │    │                             │
+│   React Client   │◄──►│  Bun/Node.js     │◄──►│     Go Microservice         │
+│   (Port: 3000)   │    │   Main Server    │    │      (Port: 9081)           │
+│                  │    │   (Port: 9090)   │    │                             │
+│  • UI/UX         │    │                  │    │  • Heavy DB Operations      │
+│  • Form Rendering│    │  • Authentication│    │  • Schema Analysis          │
+│  • User Actions  │    │  • JWT Tokens    │    │  • CRUD Operations          │
+│                  │    │  • MongoDB URIs  │    │  • Performance Optimized   │
+└──────────────────┘    │  • Link Generation│    └─────────────────────────────┘
+                        │  • Access Control│                     │
+                        │  • API Gateway   │                     │
+                        └──────────────────┘                     │
+                                 │                               │
+                        ┌─────────▼──────────┐         ┌────────▼──────────┐
+                        │                    │         │                   │
+                        │   PostgreSQL       │         │     MongoDB       │
+                        │   (Auth Database)  │         │  (Data Storage)   │
+                        │                    │         │                   │
+                        │  • User Accounts   │         │  • Collections    │
+                        │  • Projects        │         │  • Documents      │
+                        │  • Shared Links    │         │  • Schemas        │
+                        │  • Permissions     │         │  • User Data      │
+                        └────────────────────┘         └───────────────────┘
+```
+
+### User Journey Flow
+
+#### 🔧 Developer Workflow
+```
+1. 👨‍💻 Developer Login
+   ↓
+2. 🗂️ Create Project (Enter MongoDB URI)
+   ↓
+3. 🔍 Schema Analysis (Go service analyzes collections)
+   ↓
+4. 📝 Form Generation (Main server generates dynamic forms)
+   ↓
+5. 🔗 Generate Shared Link (Custom permissions)
+   ↓
+6. 📤 Share with Clients
+```
+
+#### 👥 Client Workflow  
+```
+1. 🌐 Access Shared Link
+   ↓
+2. 📋 View Dynamic Form (Generated from schema)
+   ↓
+3. ✏️ Fill & Submit Data
+   ↓
+4. 🔄 Real-time Operations (CRUD via Go service)
+   ↓
+5. 💾 Data Stored in MongoDB
+   ↓
+6. ✅ Confirmation to User
+```
+
+#### 🔒 Security & Data Flow
+```
+Client Request → Main Server (Validates JWT) → Go Service (DB Operations) → MongoDB
+     ↑                    │                          │                      │
+     └── Secure Response ←┴── Permission Check ←─────┴── Data Validation ←──┘
+```
+
 ## 📁 Project Structure
 
 ```
 universal-panel/
-├── client/                 # React TypeScript frontend
+├── client/                    # React TypeScript frontend
 │   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/         # Application pages
-│   │   ├── context/       # React Context providers
-│   │   └── api/           # API client configuration
-│   ├── public/            # Static assets
-│   └── package.json       # Frontend dependencies
-├── server/                # Node.js/Bun backend
+│   │   ├── api/              # API client configuration
+│   │   ├── context/          # React Context providers
+│   │   ├── layouts/          # Layout components
+│   │   ├── pages/            # Application pages
+│   │   ├── routes/           # Client-side routing
+│   │   ├── theme/            # UI theme configuration
+│   │   ├── App.tsx           # Main application component
+│   │   └── index.tsx         # Application entry point
+│   ├── public/               # Static assets
+│   ├── build/                # Production build output
+│   └── package.json          # Frontend dependencies
+├── server/                    # Node.js/Bun backend
 │   ├── src/
-│   │   ├── controllers/   # Route handlers
-│   │   ├── middleware/    # Authentication & logging
-│   │   ├── routes/        # API routes
-│   │   ├── auth/          # Database models & auth
-│   │   └── types/         # TypeScript definitions
-│   └── package.json       # Backend dependencies
-├── services/              # Microservices
-│   ├── auth/             # Go authentication service
-│   ├── db_access/        # Go database service
-│   └── scripts/          # Service management scripts
-└── README.md             # This file
+│   │   ├── auth/             # Authentication logic
+│   │   ├── controllers/      # Route handlers
+│   │   ├── middleware/       # Authentication & logging
+│   │   ├── routes/           # API routes
+│   │   ├── services/         # Business logic services
+│   │   ├── types/            # TypeScript definitions
+│   │   └── utils/            # Utility functions
+│   ├── .env.example          # Environment template
+│   ├── config.ts             # Application configuration
+│   ├── index.ts              # Server entry point
+│   └── package.json          # Backend dependencies
+├── services/                  # Go microservices
+│   ├── db_access/            # Database operations service
+│   │   ├── src/
+│   │   │   ├── controllers/  # HTTP request handlers
+│   │   │   ├── models/       # Data models
+│   │   │   ├── routes/       # Service routes
+│   │   │   └── services/     # Database operations
+│   │   ├── configs/          # Configuration management
+│   │   ├── app.env           # Environment variables
+│   │   ├── main.go           # Service entry point
+│   │   └── Dockerfile        # Container configuration
+│   ├── start_services.sh     # Start all microservices
+│   └── stop_services.sh      # Stop all microservices
+├── config.json               # Global configuration
+└── README.md                 # This file
 ```
 
 ## 🚀 Quick Start
@@ -84,28 +175,46 @@ bun install
 
 **Services:**
 ```bash
-cd services/auth
-go mod download
-
-cd ../db_access  
-go mod download
+cd services/db_access
+go mod tidy
 ```
 
-### 3. Start the Services
+### 3. Environment Setup
 
-**Start All Services**
+**Server Environment:**
 ```bash
-# Start microservices
-cd services
-./start_services.sh
+cd server
+cp .env.example .env
+# Edit .env with your database credentials
+```
 
-# Start backend (new terminal)
+**Service Environment:**
+```bash
+cd services/db_access
+# Edit app.env with your configuration
+```
+
+### 4. Start the Application
+
+**Start Database Service:**
+```bash
+cd services
+chmod +x start_services.sh
+./start_services.sh
+```
+
+**Start Backend Server:**
+```bash
 cd server
 bun run dev
+# Server starts on http://localhost:9090
+```
 
-# Start frontend (new terminal)  
+**Start Frontend:**
+```bash
 cd client
-npm start
+npm start  
+# Client starts on http://localhost:3000
 ```
 
 ## 📖 Usage Guide

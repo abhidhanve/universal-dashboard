@@ -13,11 +13,17 @@ func InitEnvConfigs() {
 }
 
 type env struct {
-	Mongodb_URI      string `mapstructure:"MONGODB_URI"`
-	Mongodb_Hostname string `mapstructure:"MONGODB_HOSTNAME"`
-	Port             string `mapstructure:"PORT"`
-	AES_key          string `mapstructure:"AES_KEY"`
-	AES_iv           string `mapstructure:"AES_IV"`
+	// ⚠️ SECURITY: MongoDB credentials removed from microservices
+	// Main server now manages all MongoDB URIs securely
+	// Mongodb_URI      string `mapstructure:"MONGODB_URI"`      // REMOVED for security
+	// Mongodb_Hostname string `mapstructure:"MONGODB_HOSTNAME"` // REMOVED for security
+
+	Port              string `mapstructure:"PORT"`
+	AES_key           string `mapstructure:"AES_KEY"`
+	AES_iv            string `mapstructure:"AES_IV"`
+	MaxConnections    int    `mapstructure:"MAX_CONNECTIONS"`
+	ConnectionTimeout string `mapstructure:"CONNECTION_TIMEOUT"`
+	LogLevel          string `mapstructure:"LOG_LEVEL"`
 }
 
 func loadEnvVariables() (config *env) {
