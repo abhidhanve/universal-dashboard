@@ -6,170 +6,233 @@ import {
   CardContent,
   Button,
   Stack,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
-  List,
-  ListItem,
-  ListItemText,
-  IconButton,
-  Alert,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
+  Alert,
+  Container,
+  Checkbox,
+  FormControlLabel,
+  Chip,
 } from '@mui/material';
-import {
-  Add,
-  Edit,
-  Delete,
-  Save,
-  Cancel,
-  Visibility,
-  Settings,
-} from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../api/axios';
 import toast from 'react-hot-toast';
 
-interface SharedLinkInfo {
-  id: string;
-  project_name: string;
-  collection_name: string;
-  permissions: string[];
-  can_view: boolean;
-  can_insert: boolean;
-  can_update: boolean;
-  can_delete: boolean;
-  can_modify_schema: boolean;
-  expires_at: string;
+interface ProjectSchema {
+  projectName: string;
+  description: string;
+  databaseName: string;
+  collectionName: string;
+  schema: Record<string, any>;
+  permissions: {
+    canInsert: boolean;
+    canView: boolean;
+    canDelete: boolean;
+    canModifySchema: boolean;
+  };
 }
 
-interface DocumentRecord {
-  _id: string;
-  [key: string]: any;
-}
-
-interface SchemaField {
+interface FormField {
   name: string;
   type: string;
+  formType: string;
   required: boolean;
+  examples?: string[];
 }
 
 const ClientAccessPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
-  const queryClient = useQueryClient();
   
-  const [editingRecord, setEditingRecord] = useState<string | null>(null);
-  const [newRecord, setNewRecord] = useState<any>({});
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [schemaDialogOpen, setSchemaDialogOpen] = useState(false);
-  const [editedData, setEditedData] = useState<any>({});
+  const [projectInfo, setProjectInfo] = useState<ProjectSchema | null>(null);
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Fetch shared link info and permissions
-  const { data: linkInfo, isLoading: linkLoading, error: linkError } = useQuery({
-    queryKey: ['shared-link', token],
-    queryFn: async (): Promise<SharedLinkInfo> => {
-      const response = await axios.get(`/shared-links/${token}`);
-      return response.data.data;
-    },
-    enabled: !!token,
-  });
+  // Fetch shared project information
+  useEffect(() => {
+    const fetchProjectInfo = async () => {
+      if (!token) return;
+      
+      try {
+        setIsLoading(true);
+        const response = await api.get(`/shared/${token}`);
+        setProjectInfo(response.data.data);
+        setError('');
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to load project information');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Fetch collection data
-  const { data: documents, isLoading: documentsLoading } = useQuery({
-    queryKey: ['collection-data', token],
-    queryFn: async (): Promise<DocumentRecord[]> => {
-      const response = await axios.get(`/shared-links/${token}/data`);
-      return response.data.data || [];
-    },
-    enabled: !!token && !!linkInfo?.can_view,
-  });
+    fetchProjectInfo();
+  }, [token]);
 
-  // Fetch current schema
-  const { data: schema, isLoading: schemaLoading } = useQuery({
-    queryKey: ['collection-schema', token],
-    queryFn: async (): Promise<SchemaField[]> => {
-      const response = await axios.get(`/shared-links/${token}/schema`);
-      return response.data.data || [];
-    },
-    enabled: !!token && !!linkInfo?.can_modify_schema,
-  });
+  // Generate form fields from schema
+  const generateFormFields = (): FormField[] => {
+    if (!projectInfo?.schema) return [];
+    
+    return Object.entries(projectInfo.schema)
+      .filter(([key]) => key !== '_id') // Exclude MongoDB _id field
+      .map(([key, fieldInfo]: [string, any]) => ({
+        name: key,
+        type: fieldInfo.type,
+        formType: fieldInfo.stats?.form_type || 'text',
+        required: fieldInfo.stats?.is_required || false,
+        examples: fieldInfo.stats?.examples || [],
+      }));
+  };
 
-  // Create new record mutation
-  const createRecordMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await axios.post(`/shared-links/${token}/data`, data);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection-data', token] });
-      toast.success('Record created successfully!');
-      setAddDialogOpen(false);
-      setNewRecord({});
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create record');
-    },
-  });
+  // Handle form input changes
+  const handleInputChange = (fieldName: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
 
-  // Update record mutation
-  const updateRecordMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const response = await axios.put(`/shared-links/${token}/data/${id}`, data);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection-data', token] });
-      toast.success('Record updated successfully!');
-      setEditingRecord(null);
-      setEditedData({});
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update record');
-    },
-  });
+  // Handle array field changes (skills, hobbies, etc.)
+  const handleArrayChange = (fieldName: string, value: string) => {
+    const arrayValue = value.split(',').map(item => item.trim()).filter(item => item);
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: arrayValue
+    }));
+  };
 
-  // Delete record mutation
-  const deleteRecordMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await axios.delete(`/shared-links/${token}/data/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection-data', token] });
-      toast.success('Record deleted successfully!');
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete record');
-    },
-  });
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectInfo?.permissions.canInsert) {
+      toast.error('You do not have permission to insert data');
+      return;
+    }
 
-  // Modify schema mutation
-  const modifySchemaMutation = useMutation({
-    mutationFn: async (schemaChanges: any) => {
-      const response = await axios.post(`/shared-links/${token}/schema`, schemaChanges);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collection-schema', token] });
-      queryClient.invalidateQueries({ queryKey: ['collection-data', token] });
-      toast.success('Schema updated successfully!');
-      setSchemaDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update schema');
-    },
-  });
+    setIsSubmitting(true);
+    try {
+      await api.post(
+        `/shared/${token}/data`,
+        { data: formData }
+      );
 
-  if (linkLoading) {
+      toast.success('Data submitted successfully!');
+      setSubmitSuccess(true);
+      setFormData({});
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to submit data');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Render form field based on type
+  const renderFormField = (field: FormField) => {
+    const { name, formType, examples } = field;
+    const value = formData[name] || '';
+
+    switch (formType) {
+      case 'email':
+        return (
+          <TextField
+            key={name}
+            fullWidth
+            type="email"
+            label={name.charAt(0).toUpperCase() + name.slice(1)}
+            value={value}
+            onChange={(e) => handleInputChange(name, e.target.value)}
+            placeholder={examples?.[0] || `Enter ${name}`}
+            variant="outlined"
+          />
+        );
+
+      case 'tel':
+        return (
+          <TextField
+            key={name}
+            fullWidth
+            type="tel"
+            label={name.charAt(0).toUpperCase() + name.slice(1)}
+            value={value}
+            onChange={(e) => handleInputChange(name, e.target.value)}
+            placeholder={examples?.[0] || `Enter ${name}`}
+            variant="outlined"
+          />
+        );
+
+      case 'number':
+        return (
+          <TextField
+            key={name}
+            fullWidth
+            type="number"
+            label={name.charAt(0).toUpperCase() + name.slice(1)}
+            value={value}
+            onChange={(e) => handleInputChange(name, parseFloat(e.target.value) || '')}
+            placeholder={examples?.[0] || `Enter ${name}`}
+            variant="outlined"
+          />
+        );
+
+      case 'date':
+        return (
+          <TextField
+            key={name}
+            fullWidth
+            type="date"
+            label={name.charAt(0).toUpperCase() + name.slice(1)}
+            value={value}
+            onChange={(e) => handleInputChange(name, e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            variant="outlined"
+          />
+        );
+
+      case 'checkbox':
+        return (
+          <FormControlLabel
+            key={name}
+            control={
+              <Checkbox
+                checked={value || false}
+                onChange={(e) => handleInputChange(name, e.target.checked)}
+              />
+            }
+            label={name.charAt(0).toUpperCase() + name.slice(1)}
+          />
+        );
+
+      case 'array':
+        return (
+          <TextField
+            key={name}
+            fullWidth
+            label={name.charAt(0).toUpperCase() + name.slice(1)}
+            value={Array.isArray(value) ? value.join(', ') : ''}
+            onChange={(e) => handleArrayChange(name, e.target.value)}
+            placeholder={`Enter ${name} separated by commas (e.g., coding, gaming)`}
+            variant="outlined"
+            helperText="Enter multiple values separated by commas"
+          />
+        );
+
+      default:
+        return (
+          <TextField
+            key={name}
+            fullWidth
+            label={name.charAt(0).toUpperCase() + name.slice(1)}
+            value={value}
+            onChange={(e) => handleInputChange(name, e.target.value)}
+            placeholder={examples?.[0] || `Enter ${name}`}
+            variant="outlined"
+          />
+        );
+    }
+  };
+
+  if (isLoading) {
     return (
       <Box
         sx={{
@@ -180,290 +243,125 @@ const ClientAccessPage: React.FC = () => {
           bgcolor: 'background.default',
         }}
       >
-        <CircularProgress />
+        <CircularProgress size={60} />
       </Box>
     );
   }
 
-  if (linkError || !linkInfo) {
+  if (error || !projectInfo) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'background.default',
-        }}
-      >
-        <Card sx={{ maxWidth: 600, mx: 'auto' }}>
-          <CardContent sx={{ p: 4, textAlign: 'center' }}>
-            <Alert severity="error" sx={{ mb: 3 }}>
-              Invalid or expired access link
-            </Alert>
-            <Typography variant="h5" gutterBottom>
-              Access Denied
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Card>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <Typography variant="h5" color="error" gutterBottom>
+              Access Error
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              The link you're trying to access is either invalid or has expired.
-              Please contact the project owner for a new access link.
+            <Typography variant="body1" color="text.secondary" mb={3}>
+              {error || 'Invalid or expired shared link'}
             </Typography>
+            <Button variant="outlined" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
           </CardContent>
         </Card>
-      </Box>
+      </Container>
     );
   }
 
-  const isExpired = new Date(linkInfo.expires_at) < new Date();
-
-  if (isExpired) {
+  if (submitSuccess) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'background.default',
-        }}
-      >
-        <Card sx={{ maxWidth: 600, mx: 'auto' }}>
-          <CardContent sx={{ p: 4, textAlign: 'center' }}>
-            <Alert severity="warning" sx={{ mb: 3 }}>
-              This access link has expired
-            </Alert>
-            <Typography variant="h5" gutterBottom>
-              Link Expired
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Card>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <Typography variant="h4" color="primary" gutterBottom>
+              ✅ Success!
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              This access link expired on {new Date(linkInfo.expires_at).toLocaleDateString()}.
-              Please contact the project owner for a new access link.
+            <Typography variant="h6" gutterBottom>
+              Your data has been submitted successfully
             </Typography>
+            <Typography variant="body1" color="text.secondary" mb={4}>
+              Thank you for your submission to {projectInfo.projectName}
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => {
+                setSubmitSuccess(false);
+                setFormData({});
+              }}
+            >
+              Submit Another Entry
+            </Button>
           </CardContent>
         </Card>
-      </Box>
+      </Container>
     );
   }
+
+  const formFields = generateFormFields();
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', p: 3 }}>
-      <Card sx={{ maxWidth: 1200, mx: 'auto' }}>
-        <CardContent sx={{ p: 4 }}>
-          {/* Header */}
-          <Box mb={4}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-              {linkInfo.project_name}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+        py: 4,
+      }}
+    >
+      <Container maxWidth="md">
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h4" gutterBottom color="primary">
+              {projectInfo.projectName}
             </Typography>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              Collection: {linkInfo.collection_name}
+            <Typography variant="body1" color="text.secondary" mb={2}>
+              {projectInfo.description}
             </Typography>
-            
-            <Stack direction="row" spacing={1} mb={2} flexWrap="wrap">
-              {linkInfo.can_view && <Chip label="View" color="primary" size="small" />}
-              {linkInfo.can_insert && <Chip label="Insert" color="success" size="small" />}
-              {linkInfo.can_update && <Chip label="Update" color="warning" size="small" />}
-              {linkInfo.can_delete && <Chip label="Delete" color="error" size="small" />}
-              {linkInfo.can_modify_schema && <Chip label="Modify Schema" color="secondary" size="small" />}
+            <Stack direction="row" spacing={1}>
+              <Chip label={projectInfo.databaseName} size="small" />
+              <Chip label={projectInfo.collectionName} size="small" />
             </Stack>
-            
-            <Typography variant="body2" color="text.secondary">
-              Expires: {new Date(linkInfo.expires_at).toLocaleString()}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Typography variant="h5" gutterBottom>
+              Submit Your Information
             </Typography>
-          </Box>
-
-          {/* Actions */}
-          <Stack direction="row" spacing={2} mb={3}>
-            {linkInfo.can_insert && (
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setAddDialogOpen(true)}
-              >
-                Add Record
-              </Button>
-            )}
             
-            {linkInfo.can_modify_schema && (
-              <Button
-                variant="outlined"
-                startIcon={<Settings />}
-                onClick={() => setSchemaDialogOpen(true)}
-              >
-                Modify Schema
-              </Button>
-            )}
-          </Stack>
+            <form onSubmit={handleSubmit}>
+              <Stack spacing={3}>
+                {formFields.map(renderFormField)}
+                
+                <Box sx={{ pt: 2 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    size="large"
+                    disabled={isSubmitting || !projectInfo.permissions.canInsert}
+                    fullWidth
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <CircularProgress size={20} sx={{ mr: 1 }} />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Data'
+                    )}
+                  </Button>
+                </Box>
 
-          {/* Data Table */}
-          {linkInfo.can_view && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Data Records ({documents?.length || 0})
-              </Typography>
-              
-              {documentsLoading ? (
-                <CircularProgress />
-              ) : documents?.length === 0 ? (
-                <Alert severity="info">
-                  No records found in this collection.
-                  {linkInfo.can_insert && " You can add the first record using the 'Add Record' button above."}
-                </Alert>
-              ) : (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        {/* Generate headers from first document */}
-                        {documents && documents[0] && Object.keys(documents[0]).map((key) => (
-                          <TableCell key={key} sx={{ fontWeight: 'bold' }}>
-                            {key}
-                          </TableCell>
-                        ))}
-                        {(linkInfo.can_update || linkInfo.can_delete) && (
-                          <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
-                        )}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {documents?.map((doc) => (
-                        <TableRow key={doc._id}>
-                          {Object.entries(doc).map(([key, value]) => (
-                            <TableCell key={key}>
-                              {editingRecord === doc._id && key !== '_id' ? (
-                                <TextField
-                                  size="small"
-                                  value={editedData[key] ?? value}
-                                  onChange={(e) => setEditedData({ 
-                                    ...editedData, 
-                                    [key]: e.target.value 
-                                  })}
-                                  fullWidth
-                                />
-                              ) : (
-                                <Typography variant="body2">
-                                  {typeof value === 'object' 
-                                    ? JSON.stringify(value) 
-                                    : String(value)}
-                                </Typography>
-                              )}
-                            </TableCell>
-                          ))}
-                          {(linkInfo.can_update || linkInfo.can_delete) && (
-                            <TableCell>
-                              <Stack direction="row" spacing={1}>
-                                {linkInfo.can_update && (
-                                  <>
-                                    {editingRecord === doc._id ? (
-                                      <>
-                                        <IconButton
-                                          size="small"
-                                          color="primary"
-                                          onClick={() => {
-                                            updateRecordMutation.mutate({
-                                              id: doc._id,
-                                              data: { ...doc, ...editedData }
-                                            });
-                                          }}
-                                        >
-                                          <Save />
-                                        </IconButton>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => {
-                                            setEditingRecord(null);
-                                            setEditedData({});
-                                          }}
-                                        >
-                                          <Cancel />
-                                        </IconButton>
-                                      </>
-                                    ) : (
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => {
-                                          setEditingRecord(doc._id);
-                                          setEditedData({});
-                                        }}
-                                      >
-                                        <Edit />
-                                      </IconButton>
-                                    )}
-                                  </>
-                                )}
-                                
-                                {linkInfo.can_delete && (
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => {
-                                      if (window.confirm('Are you sure you want to delete this record?')) {
-                                        deleteRecordMutation.mutate(doc._id);
-                                      }
-                                    }}
-                                  >
-                                    <Delete />
-                                  </IconButton>
-                                )}
-                              </Stack>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Add Record Dialog */}
-      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add New Record</DialogTitle>
-        <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            {/* Generate form fields based on existing schema or first document */}
-            {documents && documents[0] && Object.keys(documents[0])
-              .filter(key => key !== '_id')
-              .map((key) => (
-                <TextField
-                  key={key}
-                  label={key}
-                  value={newRecord[key] || ''}
-                  onChange={(e) => setNewRecord({ ...newRecord, [key]: e.target.value })}
-                  fullWidth
-                />
-              ))}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={() => createRecordMutation.mutate(newRecord)}
-            variant="contained"
-            disabled={createRecordMutation.isPending}
-          >
-            {createRecordMutation.isPending ? 'Adding...' : 'Add Record'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Schema Modification Dialog */}
-      <Dialog open={schemaDialogOpen} onClose={() => setSchemaDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Modify Schema Structure</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            Schema modification interface - This allows you to add, remove, or modify field types in the collection.
-          </Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Schema modification feature is coming soon! This will allow you to add new fields, change field types, and modify validation rules.
-          </Alert>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSchemaDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+                {!projectInfo.permissions.canInsert && (
+                  <Alert severity="warning">
+                    You do not have permission to submit data through this link
+                  </Alert>
+                )}
+              </Stack>
+            </form>
+          </CardContent>
+        </Card>
+      </Container>
     </Box>
   );
 };

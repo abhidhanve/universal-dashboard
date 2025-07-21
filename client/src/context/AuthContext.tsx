@@ -1,17 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
-  api_key: string;
+  company?: string;
+  verified: boolean;
+  tier: 'free' | 'premium' | 'enterprise';
+  createdAt: string;
+  lastLoginAt?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+  signup: (name: string, email: string, password: string, company?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -27,43 +31,9 @@ export const useAuth = () => {
   return context;
 };
 
-const API_BASE_URL = 'http://localhost:9090';
-
-// Configure axios defaults
-axios.defaults.baseURL = API_BASE_URL;
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Set up axios interceptor to include auth token
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
-
-    // Response interceptor to handle auth errors
-    const interceptor = axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          // Token expired or invalid
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
-          setUser(null);
-          delete axios.defaults.headers.common['Authorization'];
-          window.location.href = '/login';
-        }
-        console.log(' this is an error happening because the of /login it should /api/login or someething here is happening')
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      axios.interceptors.response.eject(interceptor);
-    };
-  }, []);
 
   // Check for existing session on app load
   useEffect(() => {
@@ -89,41 +59,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      const response = await axios.post('/api/auth/login', {
+      const response = await api.post('/auth/login', {
         email,
         password,
       });
 
-      const { data } = response.data; // Backend wraps in ResponseFormatter
+      const { data } = response.data;
       const { token, developer } = data;
 
       // Store token and user data
       localStorage.setItem('auth_token', token);
       localStorage.setItem('user', JSON.stringify(developer));
-      
-      // Set axios header for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
       setUser(developer);
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
     }
   };
 
-  const signup = async (name: string, email: string, password: string): Promise<void> => {
+  const signup = async (name: string, email: string, password: string, company?: string): Promise<void> => {
     try {
-      const response = await axios.post('/api/auth/register', {
+      const response = await api.post('/auth/register', {
         name,
         email,
         password,
+        company,
       });
 
-      // Registration successful but doesn't automatically log in
-      // User needs to login after registration
-      console.log('Registration successful:', response.data);
+      const { data } = response.data;
+      const { token, developer } = data;
+
+      // Store token and user data
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('user', JSON.stringify(developer));
+      setUser(developer);
     } catch (error) {
-      console.error('Signup error:', error);
       throw error;
     }
   };
@@ -131,21 +100,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
-  const value: AuthContextType = {
-    user,
-    login,
-    signup,
-    logout,
-    isLoading,
-    isAuthenticated: !!user,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        signup,
+        logout,
+        isLoading,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

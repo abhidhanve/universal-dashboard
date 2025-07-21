@@ -18,117 +18,114 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Tooltip
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import { 
   Share, 
-  Analytics, 
   ContentCopy, 
-  Edit,
-  Add,
-  Delete,
-  Refresh
+  Edit
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../api/axios';
 import toast from 'react-hot-toast';
 
 interface Project {
-  id: number;
+  id: string;
+  developerId: string;
   name: string;
   description: string;
-  mongodb_uri: string;
-  database_name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Collection {
-  name: string;
-  count: number;
-  sampleDocument: any;
-  schema: any;
+  mongoUri: string;
+  databaseName: string;
+  collectionName: string;
+  schemaData: any;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface SharedLink {
   id: string;
   token: string;
-  project_id: number;
-  collection_name: string;
-  permissions: string[];
-  expires_at: string;
-  created_at: string;
+  projectId: string;
+  expiresAt: string | null;
+  isActive: boolean;
+  permissions: {
+    canInsert: boolean;
+    canView: boolean;
+    canDelete: boolean;
+    canModifySchema: boolean;
+  };
+  createdAt: string;
 }
 
-const ProjectDetailPage: React.FC = () => {
+export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [selectedCollection, setSelectedCollection] = useState<string>('');
-  const [shareConfig, setShareConfig] = useState({
-    can_view: true,
-    can_insert: false,
-    can_update: false,
-    can_delete: false,
-    can_modify_schema: false,
-    expires_in_days: 30
+  const [permissions, setPermissions] = useState({
+    canInsert: true,
+    canView: true,
+    canDelete: false,
+    canModifySchema: false
   });
+  const [expiresIn, setExpiresIn] = useState<number>(7);
 
   // Fetch project details
-  const { data: project, isLoading: projectLoading } = useQuery({
+  const { data: project, isLoading: isLoadingProject } = useQuery({
     queryKey: ['project', projectId],
     queryFn: async (): Promise<Project> => {
-      const response = await axios.get(`/api/projects/${projectId}`);
+      const response = await api.get(`/projects/${projectId}`);
       return response.data.data;
     },
-    enabled: !!projectId,
   });
 
-  // Fetch MongoDB collections and schema analysis
-  const { data: collections, isLoading: collectionsLoading } = useQuery({
-    queryKey: ['collections', projectId],
-    queryFn: async (): Promise<Collection[]> => {
-      const response = await axios.get(`/api/projects/${projectId}/analyze`);
-      return response.data.data || [];
-    },
-    enabled: !!projectId,
-  });
-
-  // Fetch shared links for this project
-  const { data: sharedLinks, isLoading: sharedLinksLoading } = useQuery({
+  // Fetch shared links
+  const { data: sharedLinks = [] } = useQuery({
     queryKey: ['shared-links', projectId],
     queryFn: async (): Promise<SharedLink[]> => {
-      const response = await axios.get(`/api/projects/${projectId}/links`);
+      const response = await api.get(`/projects/${projectId}/links`);
       return response.data.data || [];
     },
-    enabled: !!projectId,
   });
 
   // Create shared link mutation
   const createSharedLinkMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await axios.post(`/api/projects/${projectId}/share`, {
-        project_id: projectId,
-        collection_name: selectedCollection,
-        ...shareConfig,
+    mutationFn: async (linkData: { permissions: { canInsert: boolean; canView: boolean; canDelete: boolean; canModifySchema: boolean }; expiresIn?: number }) => {
+      const response = await api.post(`/projects/${projectId}/share`, {
+        canInsert: linkData.permissions.canInsert,
+        canView: linkData.permissions.canView,
+        canDelete: linkData.permissions.canDelete,
+        canModifySchema: linkData.permissions.canModifySchema,
+        expiresAt: linkData.expiresIn ? new Date(Date.now() + linkData.expiresIn * 24 * 60 * 60 * 1000).toISOString() : undefined
       });
       return response.data.data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shared-links', projectId] });
-      toast.success('Shared link created successfully!');
       setShareDialogOpen(false);
-      
-      // Copy link to clipboard
-      const shareUrl = `${window.location.origin}/access/${data.token}`;
-      navigator.clipboard.writeText(shareUrl);
-      toast.success('Link copied to clipboard!');
+      toast.success('Shared link created successfully!');
+    },
+    onError: () => {
+      toast.error('Failed to create shared link');
+    },
+  });
+
+  // Refresh schema mutation
+  const refreshSchemaMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post(`/projects/${projectId}/refresh-schema`);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Schema refreshed successfully!');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create shared link');
+      toast.error(error.response?.data?.message || 'Failed to refresh schema');
     },
   });
 
@@ -138,7 +135,11 @@ const ProjectDetailPage: React.FC = () => {
     toast.success('Link copied to clipboard!');
   };
 
-  if (projectLoading) {
+  const handleCreateSharedLink = () => {
+    createSharedLinkMutation.mutate({ permissions, expiresIn });
+  };
+
+  if (isLoadingProject) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
@@ -156,231 +157,236 @@ const ProjectDetailPage: React.FC = () => {
 
   return (
     <Box>
-      {/* Header */}
       <Box mb={4}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
           <Box>
             <Typography variant="h4" fontWeight="bold" gutterBottom>
               {project.name}
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {project.description || 'No description provided'}
+            <Typography variant="body1" color="text.secondary" gutterBottom>
+              {project.description}
             </Typography>
           </Box>
-          
           <Stack direction="row" spacing={2}>
-            <Button
-              variant="outlined"
-              startIcon={<Refresh />}
-              onClick={() => {
-                queryClient.invalidateQueries({ queryKey: ['collections', projectId] });
-                toast.success('Schema analysis refreshed!');
-              }}
-            >
-              Refresh Schema
-            </Button>
             <Button
               variant="contained"
               startIcon={<Share />}
               onClick={() => setShareDialogOpen(true)}
             >
-              Create Share Link
+              Share
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<Edit />}
+              onClick={() => navigate(`/projects/${projectId}/edit`)}
+            >
+              Edit
             </Button>
           </Stack>
         </Stack>
         
-        <Stack direction="row" spacing={2} mb={2}>
-          <Chip label={`Database: ${project.database_name}`} color="primary" variant="outlined" />
-          <Chip label={`Created: ${new Date(project.created_at).toLocaleDateString()}`} variant="outlined" />
+        <Stack direction="row" spacing={2} flexWrap="wrap">
+          <Chip label={`Database: ${project.databaseName}`} color="primary" variant="outlined" />
+          <Chip label={`Collection: ${project.collectionName}`} color="secondary" variant="outlined" />
+          <Chip label={`Created: ${new Date(project.createdAt).toLocaleDateString()}`} variant="outlined" />
+          <Chip 
+            label={project.isActive ? "Active" : "Inactive"} 
+            color={project.isActive ? "success" : "error"} 
+            variant="filled" 
+          />
         </Stack>
       </Box>
 
-      {/* Collections Schema Analysis */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
-          <Typography variant="h6" fontWeight="bold" gutterBottom>
-            MongoDB Collections Analysis
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6" fontWeight="bold">
+              Schema Analysis
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => refreshSchemaMutation.mutate()}
+              disabled={refreshSchemaMutation.isPending}
+            >
+              {refreshSchemaMutation.isPending ? 'Refreshing...' : 'Refresh Schema'}
+            </Button>
+          </Stack>
           
-          {collectionsLoading ? (
-            <CircularProgress />
-          ) : collections?.length === 0 ? (
-            <Alert severity="info">
-              No collections found. Make sure your MongoDB connection is valid and contains data.
-            </Alert>
-          ) : (
-            <Stack spacing={2}>
-              {collections?.map((collection) => (
-                <Card key={collection.name} variant="outlined">
-                  <CardContent>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                      <Typography variant="h6" fontWeight="medium">
-                        {collection.name}
-                      </Typography>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Chip label={`${collection.count} documents`} size="small" />
-                        <Button
-                          size="small"
-                          startIcon={<Share />}
-                          onClick={() => {
-                            setSelectedCollection(collection.name);
-                            setShareDialogOpen(true);
-                          }}
-                        >
-                          Share
-                        </Button>
-                      </Stack>
-                    </Stack>
-                    
-                    <Typography variant="body2" color="text.secondary" mb={1}>
-                      Schema Fields:
+          {project.schemaData && Object.keys(project.schemaData).length > 0 ? (
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Fields detected in collection ({Object.keys(project.schemaData).length} fields):
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1, gap: 1 }}>
+                {Object.entries(project.schemaData).map(([field, fieldData]: [string, any]) => (
+                  <Chip
+                    key={field}
+                    label={`${field}: ${fieldData?.type || 'unknown'}`}
+                    size="small"
+                    variant="outlined"
+                    color={fieldData?.type ? 'primary' : 'default'}
+                  />
+                ))}
+              </Stack>
+              
+              {/* Schema Statistics */}
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Schema Statistics: {Object.keys(project.schemaData).length} fields detected from database collection
+                </Typography>
+                
+                {/* Detailed Field Information */}
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {Object.entries(project.schemaData).slice(0, 3).map(([field, fieldData]: [string, any]) => (
+                    <Typography key={field} variant="caption" sx={{ fontFamily: 'monospace' }}>
+                      <strong>{field}</strong>: {fieldData?.type || 'unknown'} 
+                      {fieldData?.stats?.form_type && ` (${fieldData.stats.form_type})`}
+                      {fieldData?.stats?.examples && ` - e.g., ${fieldData.stats.examples[0]}`}
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {Object.keys(collection.schema || {}).map((field) => (
-                        <Chip
-                          key={field}
-                          label={`${field}: ${collection.schema[field]}`}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
-            </Stack>
+                  ))}
+                  {Object.keys(project.schemaData).length > 3 && (
+                    <Typography variant="caption" color="text.secondary">
+                      ... and {Object.keys(project.schemaData).length - 3} more fields
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 3 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                No schema data available.
+              </Typography>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => refreshSchemaMutation.mutate()}
+                disabled={refreshSchemaMutation.isPending}
+                sx={{ mt: 1 }}
+              >
+                {refreshSchemaMutation.isPending ? 'Analyzing...' : 'Analyze Schema'}
+              </Button>
+            </Box>
           )}
         </CardContent>
       </Card>
 
-      {/* Shared Links */}
       <Card>
         <CardContent>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
-            Active Share Links
+            Shared Links
           </Typography>
           
-          {sharedLinksLoading ? (
-            <CircularProgress />
-          ) : sharedLinks?.length === 0 ? (
-            <Alert severity="info">
-              No shared links created yet. Create one to allow clients to access and modify your data.
-            </Alert>
-          ) : (
+          {sharedLinks.length > 0 ? (
             <List>
-              {sharedLinks?.map((link) => (
-                <ListItem key={link.id} divider>
+              {sharedLinks.map((link) => (
+                <ListItem
+                  key={link.id}
+                  sx={{ 
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    borderRadius: 1,
+                    mb: 1
+                  }}
+                  secondaryAction={
+                    <IconButton
+                      edge="end"
+                      onClick={() => copyToClipboard(link.token)}
+                    >
+                      <ContentCopy />
+                    </IconButton>
+                  }
+                >
                   <ListItemText
-                    primary={`Collection: ${link.collection_name}`}
+                    primary={`Token: ${link.token.substring(0, 20)}...`}
                     secondary={
-                      <Stack direction="row" spacing={1} mt={1}>
-                        {link.permissions.map((permission) => (
-                          <Chip key={permission} label={permission} size="small" color="primary" />
-                        ))}
-                        <Chip 
-                          label={`Expires: ${new Date(link.expires_at).toLocaleDateString()}`} 
-                          size="small" 
-                          color="secondary" 
-                        />
+                      <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                        {Object.entries(link.permissions).map(([key, value]) => 
+                          value && (
+                            <Chip
+                              key={key}
+                              label={key}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          )
+                        )}
+                        {link.expiresAt && (
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={`Expires: ${new Date(link.expiresAt).toLocaleDateString()}`}
+                          />
+                        )}
                       </Stack>
                     }
                   />
-                  <Stack direction="row" spacing={1}>
-                    <Tooltip title="Copy link">
-                      <IconButton onClick={() => copyToClipboard(link.token)}>
-                        <ContentCopy />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Edit permissions">
-                      <IconButton>
-                        <Edit />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete link">
-                      <IconButton color="error">
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
                 </ListItem>
               ))}
             </List>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              No shared links created yet.
+            </Typography>
           )}
         </CardContent>
       </Card>
 
-      {/* Share Dialog */}
       <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Share Link</DialogTitle>
+        <DialogTitle>Create Shared Link</DialogTitle>
         <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            <TextField
-              label="Collection"
-              value={selectedCollection}
-              onChange={(e) => setSelectedCollection(e.target.value)}
-              select
-              SelectProps={{ native: true }}
-              fullWidth
-            >
-              <option value="">Select a collection</option>
-              {collections?.map((collection) => (
-                <option key={collection.name} value={collection.name}>
-                  {collection.name} ({collection.count} documents)
-                </option>
-              ))}
-            </TextField>
-
-            <Typography variant="h6">Permissions</Typography>
-            
-            <Stack spacing={2}>
-              {[
-                { key: 'can_view', label: 'View Data' },
-                { key: 'can_insert', label: 'Insert New Records' },
-                { key: 'can_update', label: 'Update Existing Records' },
-                { key: 'can_delete', label: 'Delete Records' },
-                { key: 'can_modify_schema', label: 'Modify Schema Structure' },
-              ].map((permission) => (
-                <Box key={permission.key} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={shareConfig[permission.key as keyof typeof shareConfig] as boolean}
-                    onChange={(e) => setShareConfig({ 
-                      ...shareConfig, 
-                      [permission.key]: e.target.checked 
-                    })}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Typography>{permission.label}</Typography>
-                </Box>
-              ))}
-            </Stack>
-
-            <TextField
-              label="Expires in (days)"
-              type="number"
-              value={shareConfig.expires_in_days}
-              onChange={(e) => setShareConfig({ 
-                ...shareConfig, 
-                expires_in_days: parseInt(e.target.value) || 30 
-              })}
-              fullWidth
-            />
-          </Stack>
+          <Box sx={{ mt: 2 }}>
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Permissions
+              </Typography>
+              <Stack direction="column" spacing={1}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={permissions.canView}
+                      onChange={(e) => setPermissions(prev => ({ ...prev, canView: e.target.checked }))}
+                    />
+                  }
+                  label="Can View"
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={permissions.canInsert}
+                      onChange={(e) => setPermissions(prev => ({ ...prev, canInsert: e.target.checked }))}
+                    />
+                  }
+                  label="Can Insert"
+                />
+              </Stack>
+              
+              <TextField
+                fullWidth
+                label="Expires in (days)"
+                type="number"
+                value={expiresIn}
+                onChange={(e) => setExpiresIn(Number(e.target.value))}
+                sx={{ mt: 2 }}
+              />
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShareDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={() => createSharedLinkMutation.mutate(shareConfig)}
-            variant="contained"
-            disabled={!selectedCollection || createSharedLinkMutation.isPending}
+          <Button onClick={() => setShareDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateSharedLink}
+            disabled={createSharedLinkMutation.isPending}
           >
-            {createSharedLinkMutation.isPending ? 'Creating...' : 'Create Share Link'}
+            {createSharedLinkMutation.isPending ? <CircularProgress size={20} /> : 'Create Link'}
           </Button>
         </DialogActions>
       </Dialog>
     </Box>
   );
-};
-
-export default ProjectDetailPage;
-
+}

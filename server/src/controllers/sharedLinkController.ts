@@ -186,7 +186,7 @@ export class SharedLinkController {
         description: project.description,
         databaseName: project.databaseName,
         collectionName: project.collectionName,
-        schema: project.schemaData?.schema || {},
+        schema: project.schemaData || {},
         permissions: {
           canInsert: sharedLink.permissions.canInsert,
           canView: sharedLink.permissions.canView,
@@ -244,11 +244,11 @@ export class SharedLinkController {
       });
 
       // Track the client entry
-      if (result.documentId) {
+      if (result.document_id) {
         await authDb.trackClientEntry(
           project.id,
           sharedLink.id,
-          result.documentId,
+          result.document_id,
           data
         );
       }

@@ -4,6 +4,42 @@ import axios from 'axios';
 const DB_ACCESS_SERVICE = 'http://localhost:9081';
 const MOCKDATA_SERVICE = 'http://localhost:9083';
 
+// Helper function to properly encode MongoDB URI
+function encodeMongoUri(uri: string): string {
+  // For URIs with passwords containing @, we need a different approach
+  // Find the last @ which separates credentials from host
+  const protocolMatch = uri.match(/^(mongodb(?:\+srv)?:\/\/)/);
+  if (!protocolMatch) {
+    return uri;
+  }
+  
+  const protocol = protocolMatch[1];
+  const remaining = uri.substring(protocol.length);
+  
+  // Find the last @ symbol (this separates credentials from host)
+  const lastAtIndex = remaining.lastIndexOf('@');
+  if (lastAtIndex === -1) {
+    return uri; // No credentials
+  }
+  
+  const credentials = remaining.substring(0, lastAtIndex);
+  const hostAndParams = remaining.substring(lastAtIndex + 1);
+  
+  // Split credentials into username:password
+  const colonIndex = credentials.indexOf(':');
+  if (colonIndex === -1) {
+    return uri; // No password
+  }
+  
+  const username = credentials.substring(0, colonIndex);
+  const password = credentials.substring(colonIndex + 1);
+  
+  // URL encode the password only
+  const encodedPassword = encodeURIComponent(password);
+  
+  return `${protocol}${username}:${encodedPassword}@${hostAndParams}`;
+}
+
 // Type definitions for the service
 interface SchemaAnalysisRequest {
   mongoUri: string;
@@ -12,16 +48,35 @@ interface SchemaAnalysisRequest {
 }
 
 interface SchemaAnalysisResponse {
-  fields: SchemaField[];
-  totalDocuments: number;
-  collectionName: string;
+  message: string;
+  database: string;
+  collection: string;
+  schema: Record<string, SchemaField>;
+  sample_count: number;
+  total_fields: number;
+  code: number;
 }
 
 interface SchemaField {
-  name: string;
   type: string;
-  required: boolean;
-  examples?: any[];
+  occurrences: number;
+  total_docs: number;
+  frequency: number;
+  all_types: Record<string, number>;
+  stats: {
+    is_required: boolean;
+    form_type: string;
+    examples?: string[];
+    pattern?: string;
+    min_length?: number;
+    max_length?: number;
+    avg_length?: number;
+    min_value?: number;
+    max_value?: number;
+    avg_value?: number;
+    unique_values?: string[];
+    array_items?: string;
+  };
 }
 
 interface DataInsertRequest {
@@ -32,9 +87,11 @@ interface DataInsertRequest {
 }
 
 interface DataInsertResponse {
-  success: boolean;
-  documentId: string;
   message: string;
+  database: string;
+  collection: string;
+  document_id: string;
+  code: number;
 }
 
 interface DataRetrievalRequest {
@@ -102,8 +159,15 @@ export class ExternalDatabaseService {
    */
   async analyzeSchema(request: SchemaAnalysisRequest): Promise<SchemaAnalysisResponse> {
     try {
+      const encodedUri = encodeMongoUri(request.mongoUri);
+      console.log('📋 Schema Analysis Request:');
+      console.log('  Original URI:', request.mongoUri);
+      console.log('  Encoded URI: ', encodedUri);
+      console.log('  Database:    ', request.databaseName);
+      console.log('  Collection:  ', request.collectionName);
+      
       const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/schema-analysis`, {
-        mongo_uri: request.mongoUri,
+        mongo_uri: encodedUri,
         database_name: request.databaseName,
         collection_name: request.collectionName
       }, {
@@ -115,9 +179,17 @@ export class ExternalDatabaseService {
 
       return response.data;
     } catch (error) {
+      console.error('📛 Schema Analysis Error Details:');
       if (axios.isAxiosError(error)) {
+        console.error('  Status:', error.response?.status);
+        console.error('  StatusText:', error.response?.statusText);
+        console.error('  Data:', error.response?.data);
+        console.error('  Headers:', error.response?.headers);
+        console.error('  Request URL:', error.config?.url);
+        console.error('  Request Data:', error.config?.data);
         throw new Error(`Schema analysis failed: ${error.response?.data?.message || error.message}`);
       }
+      console.error('  Non-Axios Error:', error);
       throw error;
     }
   }
@@ -127,8 +199,9 @@ export class ExternalDatabaseService {
    */
   async insertData(request: DataInsertRequest): Promise<DataInsertResponse> {
     try {
+      const encodedUri = encodeMongoUri(request.mongoUri);
       const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/data-insert`, {
-        mongo_uri: request.mongoUri,
+        mongo_uri: encodedUri,
         database_name: request.databaseName,
         collection_name: request.collectionName,
         data: request.data
@@ -139,13 +212,8 @@ export class ExternalDatabaseService {
         timeout: 15000 // 15 second timeout for data insertion
       });
 
-      // Map Go service response to TypeScript interface
-      const result = response.data;
-      return {
-        success: true,
-        documentId: result.document_id || result.inserted_id || 'unknown',
-        message: result.message || 'Data inserted successfully'
-      };
+      // Return the Go service response directly
+      return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(`Data insertion failed: ${error.response?.data?.message || error.message}`);
@@ -159,8 +227,9 @@ export class ExternalDatabaseService {
    */
   async retrieveData(request: DataRetrievalRequest): Promise<DataRetrievalResponse> {
     try {
+      const encodedUri = encodeMongoUri(request.mongoUri);
       const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/data-get`, {
-        mongo_uri: request.mongoUri,
+        mongo_uri: encodedUri,
         database_name: request.databaseName,
         collection_name: request.collectionName,
         query: request.query || {},
@@ -193,8 +262,9 @@ export class ExternalDatabaseService {
    */
   async deleteData(request: DataDeleteRequest): Promise<DataDeleteResponse> {
     try {
+      const encodedUri = encodeMongoUri(request.mongoUri);
       const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/data-delete`, {
-        mongo_uri: request.mongoUri,
+        mongo_uri: encodedUri,
         database_name: request.databaseName,
         collection_name: request.collectionName,
         document_id: request.documentId

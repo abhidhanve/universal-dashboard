@@ -41,7 +41,7 @@ export class ProjectController {
           databaseName,
           collectionName
         });
-        schemaData = schemaResult;
+        schemaData = schemaResult.schema; // Extract schema from Go service response
       } catch (error) {
         console.warn('Schema analysis failed during project creation:', error);
         // Continue without schema data
@@ -179,9 +179,12 @@ export class ProjectController {
         collectionName: project.collectionName
       });
 
+      // Extract schema data from Go service response
+      const schemaData = schemaResult.schema;
+
       // Update project with new schema
       const updatedProject = await authDb.updateProject(id, {
-        schemaData: schemaResult
+        schemaData: schemaData
       });
 
       res.status(200).json({

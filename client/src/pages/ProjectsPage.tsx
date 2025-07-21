@@ -33,13 +33,17 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 
 interface Project {
-  id: number;
+  id: string;
+  developerId: string;
   name: string;
   description: string;
-  mongodb_uri: string;
-  database_name: string;
-  created_at: string;
-  updated_at: string;
+  mongoUri: string;
+  databaseName: string;
+  collectionName: string;
+  schemaData: any;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const ProjectsPage: React.FC = () => {
@@ -63,7 +67,6 @@ const ProjectsPage: React.FC = () => {
     queryKey: ['projects'],
     queryFn: async (): Promise<Project[]> => {
       const response = await api.get('/projects');
-      // Backend returns { success: true, data: [...], message, meta }
       return response.data.data || [];
     },
   });
@@ -71,7 +74,6 @@ const ProjectsPage: React.FC = () => {
   // Create project mutation
   const createMutation = useMutation({
     mutationFn: async (projectData: typeof newProject) => {
-      // Only send required fields
       const payload = {
         name: projectData.name,
         description: projectData.description,
@@ -84,7 +86,7 @@ const ProjectsPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Project created successfully!');
+      toast.success('Project created successfully with schema analysis!');
       setCreateDialogOpen(false);
       setNewProject({ name: '', description: '', mongoUri: '', databaseName: '', collectionName: '' });
     },
@@ -95,7 +97,7 @@ const ProjectsPage: React.FC = () => {
 
   // Delete project mutation
   const deleteMutation = useMutation({
-    mutationFn: async (projectId: number) => {
+    mutationFn: async (projectId: string) => {
       await api.delete(`/projects/${projectId}`);
     },
     onSuccess: () => {
@@ -239,7 +241,7 @@ const ProjectsPage: React.FC = () => {
                 
                 <Stack direction="row" spacing={1} mb={2}>
                   <Chip
-                    label={project.database_name}
+                    label={project.databaseName}
                     size="small"
                     color="primary"
                     variant="outlined"
@@ -247,7 +249,7 @@ const ProjectsPage: React.FC = () => {
                 </Stack>
                 
                 <Typography variant="caption" color="text.secondary">
-                  Created {new Date(project.created_at).toLocaleDateString()}
+                  Created {new Date(project.createdAt).toLocaleDateString()}
                 </Typography>
               </CardContent>
             </Card>

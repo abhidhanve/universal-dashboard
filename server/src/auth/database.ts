@@ -523,6 +523,7 @@ class AuthDatabase {
     const result = await sql`
       UPDATE projects SET is_active = false, updated_at = NOW() 
       WHERE id = ${projectId} AND is_active = true
+      RETURNING id
     `;
 
     return result.length > 0;
