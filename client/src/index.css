@@ -1,33 +1,23 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-:root {
-  /* Custom colors */
-  --color-primary: #0066b2;
-  --color-secondary: #40e0d0;
-  --color-background: #000000;
-  --color-foreground: #ebecee;
-  --color-front: #ffffff;
-  --color-back: #000000;
+body {
+  margin: 0;
+  font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom utilities */
-@layer utilities {
-  .text-primary {
-    color: var(--color-primary);
-  }
-  .text-secondary {
-    color: var(--color-secondary);
-  }
-  .text-foreground {
-    color: var(--color-foreground);
-  }
-  .text-back {
-    color: var(--color-back);
-  }
-  .bg-background {
-    background-color: var(--color-background);
-  }
-  .bg-front {
-    background-color: var(--color-front);
-  }
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
