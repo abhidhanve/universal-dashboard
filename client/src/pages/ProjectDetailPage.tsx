@@ -197,13 +197,13 @@ export default function ProjectDetailPage() {
             >
               Share
             </Button>
-            <Button
+            {/* <Button
               variant="outlined"
               startIcon={<Edit />}
               onClick={() => navigate(`/projects/${projectId}/edit`)}
             >
               Edit
-            </Button>
+            </Button> */}
           </Stack>
         </Stack>
         
@@ -230,8 +230,9 @@ export default function ProjectDetailPage() {
               size="small"
               onClick={() => refreshSchemaMutation.mutate()}
               disabled={refreshSchemaMutation.isPending}
+              title="Refresh from database while preserving manually added fields"
             >
-              {refreshSchemaMutation.isPending ? 'Refreshing...' : 'Refresh Schema'}
+              {refreshSchemaMutation.isPending ? 'Refreshing...' : 'Refresh from DB'}
             </Button>
           </Stack>
           
@@ -286,8 +287,9 @@ export default function ProjectDetailPage() {
                 onClick={() => refreshSchemaMutation.mutate()}
                 disabled={refreshSchemaMutation.isPending}
                 sx={{ mt: 1 }}
+                title="Analyze schema from database"
               >
-                {refreshSchemaMutation.isPending ? 'Analyzing...' : 'Analyze Schema'}
+                {refreshSchemaMutation.isPending ? 'Analyzing...' : 'Analyze from DB'}
               </Button>
             </Box>
           )}

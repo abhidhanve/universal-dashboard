@@ -2,7 +2,6 @@ import axios from 'axios';
 
 // Go Services Configuration
 const DB_ACCESS_SERVICE = 'http://localhost:9081';
-const MOCKDATA_SERVICE = 'http://localhost:9083';
 
 // Helper function to properly encode MongoDB URI
 function encodeMongoUri(uri: string): string {

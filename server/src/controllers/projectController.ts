@@ -172,7 +172,13 @@ export class ProjectController {
         });
       }
 
-      // Re-analyze schema
+      console.log('🔄 Schema refresh started:', {
+        projectId: id,
+        currentSchema: Object.keys(project.schemaData || {}),
+        timestamp: new Date().toISOString()
+      });
+
+      // Re-analyze schema from MongoDB
       const schemaResult = await externalDatabaseService.analyzeSchema({
         mongoUri: project.mongoUri,
         databaseName: project.databaseName,
@@ -180,17 +186,50 @@ export class ProjectController {
       });
 
       // Extract schema data from Go service response
-      const schemaData = schemaResult.schema;
+      const freshSchemaData = schemaResult.schema;
 
-      // Update project with new schema
+      // Get current schema to preserve manually added fields
+      const currentSchema = project.schemaData || {};
+      
+      // Merge schemas: keep manually added fields + update existing fields with fresh data
+      const mergedSchema = { ...currentSchema };
+
+      // Update existing fields with fresh analysis data (but keep manually added ones)
+      for (const [fieldName, fieldData] of Object.entries(freshSchemaData)) {
+        // If the field exists in fresh schema, update it
+        // But preserve any manual modifications if they exist
+        if (currentSchema[fieldName]) {
+          // Field exists in both - merge the data
+          mergedSchema[fieldName] = {
+            ...fieldData, // Fresh analysis data
+            ...currentSchema[fieldName], // Keep any manual overrides
+            // Always update the type from fresh analysis as it's more reliable
+            type: (fieldData as any)?.type || (currentSchema[fieldName] as any)?.type
+          };
+        } else {
+          // New field from database analysis
+          mergedSchema[fieldName] = fieldData;
+        }
+      }
+
+      console.log('🔗 Schema merge completed:', {
+        projectId: id,
+        freshFields: Object.keys(freshSchemaData),
+        currentFields: Object.keys(currentSchema),
+        mergedFields: Object.keys(mergedSchema),
+        preservedManualFields: Object.keys(currentSchema).filter(field => !(field in freshSchemaData)),
+        timestamp: new Date().toISOString()
+      });
+
+      // Update project with merged schema (preserves manual additions)
       const updatedProject = await authDb.updateProject(id, {
-        schemaData: schemaData
+        schemaData: mergedSchema
       });
 
       res.status(200).json({
         success: true,
         data: updatedProject,
-        message: 'Schema refreshed successfully'
+        message: `Schema refreshed successfully. Preserved ${Object.keys(currentSchema).filter(field => !(field in freshSchemaData)).length} manually added fields.`
       });
     } catch (error) {
       console.error('Schema refresh error:', error);

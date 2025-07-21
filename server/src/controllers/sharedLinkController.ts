@@ -236,6 +236,12 @@ export class SharedLinkController {
         });
       }
 
+      console.log('🔍 getSharedProject - Current schema in database:', {
+        projectId: project.id,
+        schemaData: project.schemaData,
+        timestamp: new Date().toISOString()
+      });
+
       // Return safe project information for clients
       const clientProjectInfo = {
         projectName: project.name,
@@ -474,9 +480,24 @@ export class SharedLinkController {
 
       await authDb.updateProject(sharedLink.projectId, { schemaData: updatedSchemaData });
 
+      // Add a small delay to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Get the updated project to return the latest schema
+      const updatedProject = await authDb.getProjectById(sharedLink.projectId);
+      
+      console.log('✅ Schema field added and persisted:', {
+        projectId: sharedLink.projectId,
+        newFields,
+        updatedSchemaData: updatedProject?.schemaData
+      });
+      
       res.status(200).json({
         success: true,
-        data: result,
+        data: {
+          ...result,
+          updatedSchema: updatedProject?.schemaData || updatedSchemaData
+        },
         message: 'Schema fields added successfully'
       });
     } catch (error) {
@@ -549,9 +570,24 @@ export class SharedLinkController {
 
       await authDb.updateProject(sharedLink.projectId, { schemaData: updatedSchemaData });
 
+      // Add a small delay to ensure database consistency  
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Get the updated project to return the latest schema
+      const updatedProject = await authDb.getProjectById(sharedLink.projectId);
+
+      console.log('✅ Schema field removed and persisted:', {
+        projectId: sharedLink.projectId,
+        removedField: fieldName,
+        updatedSchemaData: updatedProject?.schemaData
+      });
+
       res.status(200).json({
         success: true,
-        data: result,
+        data: {
+          ...result,
+          updatedSchema: updatedProject?.schemaData || updatedSchemaData
+        },
         message: `Field '${fieldName}' removed successfully`
       });
     } catch (error) {

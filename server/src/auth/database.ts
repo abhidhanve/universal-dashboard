@@ -520,13 +520,27 @@ class AuthDatabase {
     collectionName: string;
     schemaData: any;
   }>): Promise<Project | null> {
+    console.log('🔄 updateProject called:', { projectId, updates });
+
     // For simplicity, let's handle common update cases
     if (updates.schemaData !== undefined) {
-      await sql`
+      console.log('💾 Updating schema_data:', { 
+        projectId, 
+        newSchemaData: updates.schemaData,
+        timestamp: new Date().toISOString()
+      });
+
+      const updateResult = await sql`
         UPDATE projects 
         SET schema_data = ${JSON.stringify(updates.schemaData)}, updated_at = NOW()
         WHERE id = ${projectId} AND is_active = true
+        RETURNING id, schema_data
       `;
+
+      console.log('✅ Schema update result:', { 
+        updateResult: updateResult.length > 0 ? updateResult[0] : 'No rows updated',
+        timestamp: new Date().toISOString()
+      });
     }
 
     if (updates.name !== undefined) {
@@ -537,7 +551,15 @@ class AuthDatabase {
       `;
     }
 
-    return this.getProjectById(projectId);
+    // Get the updated project and verify the changes were applied
+    const updatedProject = await this.getProjectById(projectId);
+    console.log('🔍 Retrieved updated project:', {
+      projectId,
+      schemaData: updatedProject?.schemaData,
+      timestamp: new Date().toISOString()
+    });
+
+    return updatedProject;
   }
 
   async deleteProject(projectId: string): Promise<boolean> {

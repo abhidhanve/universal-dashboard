@@ -47,15 +47,6 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 start_service "DB Access Service" "$SCRIPT_DIR/db_access" "9081"
 sleep 2
 
-start_service "Mock Data Service" "$SCRIPT_DIR/mockdata" "9083"
-sleep 2
-
-echo "🔧 Starting Mock Data Service on port 9083 (for testing)..."
-cd "$SCRIPT_DIR/mockdata"
-go run main.go &
-MOCKDATA_PID=$!
-echo "✅ Mock Data Service started (PID: $MOCKDATA_PID)"
-
 echo ""
 echo "🎉 Method 3 services started successfully!"
 echo "================================"
