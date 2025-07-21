@@ -29,24 +29,24 @@ Universal Panel is a comprehensive full-stack application that enables developer
 ### Architecture Overview
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Universal Panel System                             │
+│                           Universal Panel System                            │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-┌──────────────────┐    ┌──────────────────┐    ┌─────────────────────────────┐
-│                  │    │                  │    │                             │
-│   React Client   │◄──►│  Bun/Node.js     │◄──►│     Go Microservice         │
-│   (Port: 3000)   │    │   Main Server    │    │      (Port: 9081)           │
-│                  │    │   (Port: 9090)   │    │                             │
-│  • UI/UX         │    │                  │    │  • Heavy DB Operations      │
-│  • Form Rendering│    │  • Authentication│    │  • Schema Analysis          │
-│  • User Actions  │    │  • JWT Tokens    │    │  • CRUD Operations          │
-│                  │    │  • MongoDB URIs  │    │  • Performance Optimized   │
-└──────────────────┘    │  • Link Generation│    └─────────────────────────────┘
-                        │  • Access Control│                     │
-                        │  • API Gateway   │                     │
-                        └──────────────────┘                     │
-                                 │                               │
-                        ┌─────────▼──────────┐         ┌────────▼──────────┐
+┌───────────────────┐    ┌─────────────────────┐    ┌─────────────────────────────┐
+│                   │    │                     │    │                             │
+│   React Client    │◄──►│  Bun/Node.js        │◄──►│     Go Microservice         │
+│   (Port: 3000)    │    │   Main Server       │    │                             │
+│                   │    │                     │    │                             │
+│  • UI/UX          │    │                     │    │  • Heavy DB Operations      │
+│  • Form Rendering │    │  • Authentication   │    │  • Schema Analysis          │
+│  • User Actions   │    │  • JWT Tokens       │    │  • CRUD Operations          │
+│                   │    │  • MongoDB URIs     │    │  • Performance Optimized    │
+└────────────────── ┘    │  • Link Generation. │    └─────────────────────────────┘
+                         │  • Access Control   │                 │
+                         │  • API Gateway      │                 │
+                         └─────────────────────┘                 │
+                                   │                             │
+                        ┌──────────▼─────────┐         ┌─────────▼─────────┐
                         │                    │         │                   │
                         │   PostgreSQL       │         │     MongoDB       │
                         │   (Auth Database)  │         │  (Data Storage)   │
@@ -207,33 +207,14 @@ chmod +x start_services.sh
 ```bash
 cd server
 bun run dev
-# Server starts on http://localhost:9090
+
 ```
 
 **Start Frontend:**
 ```bash
 cd client
 npm start  
-# Client starts on http://localhost:3000
+
 ```
-
-## 📖 Usage Guide
-
-### Developer Workflow
-
-1. **Sign Up/Login**: Create a developer account
-2. **Create Project**: Add a new MongoDB project with connection details
-3. **Analyze Schema**: Let the system analyze your collection structure
-4. **Generate Shared Links**: Create secure links with specific permissions
-5. **Share with Clients**: Provide links for client access
-
-### Client Access
-
-1. **Access via Link**: Use shared link provided by developer
-2. **View Data**: Browse existing records (if permitted)
-3. **Add Records**: Submit new data through generated forms
-4. **Modify Schema**: Add/remove fields (if permitted)
-5. **Manage Data**: Edit or delete records (based on permissions)
-
 
 **Universal Panel** - Making database management and client access simple and secure.
