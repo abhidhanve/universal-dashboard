@@ -18,12 +18,22 @@ dist-ssr
 *.env
 *.env.*
 app.env
+.env.example
+*.env.example
 
 # Specific environment files
 server/.env
 server/.env.*
+server/.env.example
+server/*.env
+server/*.env.*
 client/.env
-client/.env.*
+client/.env.*  
+client/.env.example
+client/*.env
+client/*.env.*
 services/*/app.env
 services/*/.env
 services/*/.env.*
+services/*/.env.example
+services/*/.*env*
