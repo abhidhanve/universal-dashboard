@@ -8,6 +8,7 @@
     "dev": "bun --watch index.ts",
     "start": "bun run index.ts",
     "build": "bun build index.ts --outdir ./dist",
+     "vercel-build": "echo 'No build step required'",
     "test": "bun test"
   },
   "devDependencies": {

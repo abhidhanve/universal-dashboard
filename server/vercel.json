@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "name": "universal-panel-server",
+  "builds": [
+    {
+      "src": "index.ts",
+      "use": "@vercel/bun"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/index.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.ts"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "index.ts": {
+      "runtime": "bun"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+# Docker Compose for Go microservices
+version: '3.8'
+
+services:
+  db-access-service:
+    build: 
+      context: ./db_access
+      dockerfile: Dockerfile
+    container_name: universal-panel-db-access
+    ports:
+      - "9081:9081"
+    environment:
+      - PORT=9081
+      - AES_KEY=${AES_KEY}
+      - AES_IV=${AES_IV}
+      - MAX_CONNECTIONS=100
+      - CONNECTION_TIMEOUT=30s
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9081/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - universal-panel-network
+
+  # Add more services here as needed
+  # auth-service:
+  #   build: 
+  #     context: ./auth
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - universal-panel-network
+
+networks:
+  universal-panel-network:
+    driver: bridge
+
+volumes:
+  service_data:
+    driver: local
