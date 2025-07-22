@@ -10,9 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ⚠️ SECURITY: Global MongoDB client removed for security
-// All database connections now managed by main server
-
 func main() {
 	// Initialize environment configurations
 	configs.InitEnvConfigs()
@@ -30,11 +27,6 @@ func main() {
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	router.Use(cors.New(config))
 
-	// ⚠️ SECURITY: MongoDB client initialization removed
-	// All database connections now managed by main server for security
-	// Microservice only handles operations with URIs provided by main server
-
-	// Setup all routes using MVC architecture
 	routes.SetupRoutes(router)
 
 	fmt.Printf("🚀 DB Access Service (MVC Architecture) starting on port %s\n", port)
