@@ -1,5 +1,5 @@
 # Docker Compose for Go microservices
-version: '3.8'
+
 
 services:
   db-access-service:
