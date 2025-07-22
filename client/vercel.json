@@ -23,7 +23,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "@api_url",
-    "REACT_APP_CLIENT_URL": "@client_url"
+    "VITE_API_URL": "https://universal-panel-production-51f6.up.railway.app/api"
   }
 }
