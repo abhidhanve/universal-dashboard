@@ -6,7 +6,6 @@ import { CircularProgress, Box } from '@mui/material';
 import LoginPage from '../pages/LoginPage';
 import SignUpPage from '../pages/SignUpPage';
 import DashboardLayout from '../layouts/DashboardLayout';
-import DashboardPage from '../pages/DashboardPage';
 import ProjectsPage from '../pages/ProjectsPage';
 import ProjectDetailPage from '../pages/ProjectDetailPage';
 import ClientAccessPage from '../pages/ClientAccessPage';

@@ -24,10 +24,9 @@ import {
 import { 
   Share, 
   ContentCopy, 
-  Edit,
   Delete
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -63,7 +62,6 @@ interface SharedLink {
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);

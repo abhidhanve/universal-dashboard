@@ -9,18 +9,16 @@ import {
   Stack,
   Avatar,
   Divider,
-  Alert,
   CircularProgress,
 } from '@mui/material';
 import { Person, Edit, Save, Cancel } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
 const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuth();
-  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',

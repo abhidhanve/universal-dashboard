@@ -19,10 +19,8 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import {
-  Dashboard as DashboardIcon,
   Folder as ProjectsIcon,
   Menu as MenuIcon,
-  AccountCircle,
   Logout,
   Person,
 } from '@mui/icons-material';

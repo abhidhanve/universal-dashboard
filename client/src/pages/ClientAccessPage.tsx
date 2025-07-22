@@ -27,12 +27,10 @@ import {
   DialogActions,
   Tabs,
   Tab,
-  Pagination,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Autocomplete,
 } from '@mui/material';
 import { Delete, Visibility, Add, Refresh, Settings } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
