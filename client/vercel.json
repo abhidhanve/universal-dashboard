@@ -23,7 +23,7 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "@api_url"
-  
+    "REACT_APP_API_URL": "@api_url",
+    "REACT_APP_CLIENT_URL": "@client_url"
   }
 }

@@ -14,8 +14,11 @@ func main() {
 	// Initialize environment configurations
 	configs.InitEnvConfigs()
 
-	// Get port from environment
+	// Get port from environment (fallback to 9081 if not set)
 	port := configs.Env.Port
+	if port == "" {
+		port = "9081"
+	}
 
 	// Initialize Gin router
 	router := gin.Default()
@@ -40,8 +43,10 @@ func main() {
 	fmt.Println("   • API v1: /api/v1/*")
 	fmt.Println("   • Info: GET /")
 
-	// Start the server
-	if err := router.Run(fmt.Sprintf(":%s", port)); err != nil {
+	// Start the server (bind to all interfaces for Railway)
+	serverAddr := fmt.Sprintf("0.0.0.0:%s", port)
+	fmt.Printf("🚀 Starting server on %s\n", serverAddr)
+	if err := router.Run(serverAddr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
