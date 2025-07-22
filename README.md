@@ -35,13 +35,12 @@ Universal Panel is a comprehensive full-stack application that enables developer
 ┌───────────────────┐    ┌─────────────────────┐    ┌─────────────────────────────┐
 │                   │    │                     │    │                             │
 │   React Client    │◄──►│  Bun/Node.js        │◄──►│     Go Microservice         │
-│   (Port: 3000)    │    │   Main Server       │    │                             │
-│                   │    │                     │    │                             │
+│                   │    │   Main Server       │    │                             │
 │  • UI/UX          │    │                     │    │  • Heavy DB Operations      │
 │  • Form Rendering │    │  • Authentication   │    │  • Schema Analysis          │
 │  • User Actions   │    │  • JWT Tokens       │    │  • CRUD Operations          │
 │                   │    │  • MongoDB URIs     │    │  • Performance Optimized    │
-└────────────────── ┘    │  • Link Generation. │    └─────────────────────────────┘
+└───────────────────┘    │  • Link Generation. │    └─────────────────────────────┘
                          │  • Access Control   │                 │
                          │  • API Gateway      │                 │
                          └─────────────────────┘                 │
@@ -155,7 +154,7 @@ universal-panel/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/universal-panel.git
+git clone https://github.com/abhidhanve/universal-panel.git
 cd universal-panel
 ```
 
@@ -179,22 +178,7 @@ cd services/db_access
 go mod tidy
 ```
 
-### 3. Environment Setup
-
-**Server Environment:**
-```bash
-cd server
-cp .env.example .env
-# Edit .env with your database credentials
-```
-
-**Service Environment:**
-```bash
-cd services/db_access
-# Edit app.env with your configuration
-```
-
-### 4. Start the Application
+### 3. Start the Application
 
 **Start Database Service:**
 ```bash
