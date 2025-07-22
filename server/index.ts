@@ -87,3 +87,4 @@ app.listen(PORT, () => {
   console.log(`📋 Workflow: Schema Analysis → Form Generation → Shared Links → Client Operations`);
   console.log(`🔧 Routes: /api/auth | /api/projects | /api/shared/:token`);
 });
+
