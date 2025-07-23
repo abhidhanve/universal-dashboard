@@ -7,6 +7,9 @@
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build"
+      },
+      "env": {
+        "REACT_APP_API_URL": "https://universal-panel-production-51f6.up.railway.app/api"
       }
     }
   ],
@@ -23,6 +26,6 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://universal-panel-production-51f6.up.railway.app/api"
+    "REACT_APP_API_URL": "https://universal-panel-production-51f6.up.railway.app"
   }
 }
