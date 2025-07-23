@@ -358,30 +358,42 @@ export class ExternalDatabaseService {
     databaseName: string;
     collectionName: string;
     newFields: Record<string, any>;
+    mongoUri?: string;
   }): Promise<any> {
     try {
-      // For now, we'll just return success since MongoDB is schema-less
-      // The new fields will be automatically accepted when documents are inserted
       console.log('Adding schema fields:', request.newFields, 'to', request.databaseName, request.collectionName);
       
+      // If mongoUri is provided, also notify the Go service for consistency
+      if (request.mongoUri) {
+        try {
+          const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/add-schema-fields`, {
+            mongo_uri: request.mongoUri,
+            database_name: request.databaseName,
+            collection_name: request.collectionName,
+            new_fields: request.newFields
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000 // 10 second timeout for schema modification
+          });
+
+          console.log('✅ Go service notified of schema field addition:', response.data);
+          return {
+            message: `Schema fields added to collection '${request.collectionName}' and registered with database service.`,
+            success: true,
+            goServiceResponse: response.data
+          };
+        } catch (goServiceError) {
+          console.warn('⚠️ Go service notification failed, but continuing with local schema update:', goServiceError);
+          // Continue even if Go service fails - our local schema registry is the source of truth
+        }
+      }
+      
       return {
-        message: `Schema fields can be added to collection '${request.collectionName}'. MongoDB will accept new fields when documents are inserted/updated.`,
+        message: `Schema fields added to collection '${request.collectionName}'. Fields are registered in schema registry.`,
         success: true
       };
-      
-      // TODO: Uncomment when Go service schema endpoints are fixed
-      // const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/add-schema-fields`, {
-      //   database_name: request.databaseName,
-      //   collection_name: request.collectionName,
-      //   new_fields: request.newFields
-      // }, {
-      //   headers: {
-      //     'Content-Type': 'application/json'
-      //   },
-      //   timeout: 10000 // 10 second timeout for schema modification
-      // });
-
-      // return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(`Schema field addition failed: ${error.response?.data?.message || error.message}`);
@@ -397,29 +409,42 @@ export class ExternalDatabaseService {
     databaseName: string;
     collectionName: string;
     fieldName: string;
+    mongoUri?: string;
   }): Promise<any> {
     try {
-      // For now, we'll simulate the field removal without calling the Go service
       console.log('Removing schema field:', request.fieldName, 'from', request.databaseName, request.collectionName);
       
+      // If mongoUri is provided, also notify the Go service for consistency  
+      if (request.mongoUri) {
+        try {
+          const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/remove-schema-field`, {
+            mongo_uri: request.mongoUri,
+            database_name: request.databaseName,
+            collection_name: request.collectionName,
+            field_name: request.fieldName
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000 // 10 second timeout for schema modification
+          });
+
+          console.log('✅ Go service notified of schema field removal:', response.data);
+          return {
+            message: `Field '${request.fieldName}' removed from collection '${request.collectionName}' and database service notified.`,
+            success: true,
+            goServiceResponse: response.data
+          };
+        } catch (goServiceError) {
+          console.warn('⚠️ Go service notification failed, but continuing with local schema update:', goServiceError);
+          // Continue even if Go service fails - our local schema registry is the source of truth
+        }
+      }
+      
       return {
-        message: `Field '${request.fieldName}' would be removed from collection '${request.collectionName}'. Note: This is currently a simulation.`,
+        message: `Field '${request.fieldName}' removed from collection '${request.collectionName}' schema registry.`,
         success: true
       };
-      
-      // TODO: Uncomment when Go service schema endpoints are fixed
-      // const response = await axios.post(`${DB_ACCESS_SERVICE}/method3/remove-schema-field`, {
-      //   database_name: request.databaseName,
-      //   collection_name: request.collectionName,
-      //   field_name: request.fieldName
-      // }, {
-      //   headers: {
-      //     'Content-Type': 'application/json'
-      //   },
-      //   timeout: 10000 // 10 second timeout for schema modification
-      // });
-
-      // return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(`Schema field removal failed: ${error.response?.data?.message || error.message}`);

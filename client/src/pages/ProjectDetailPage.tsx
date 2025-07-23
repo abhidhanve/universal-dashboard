@@ -230,9 +230,9 @@ export default function ProjectDetailPage() {
               size="small"
               onClick={() => refreshSchemaMutation.mutate()}
               disabled={refreshSchemaMutation.isPending}
-              title="Refresh from database while preserving manually added fields"
+              title="Refresh database schema while preserving manually added fields from shared links"
             >
-              {refreshSchemaMutation.isPending ? 'Refreshing...' : 'Refresh from DB'}
+              {refreshSchemaMutation.isPending ? 'Refreshing...' : 'Refresh Schema'}
             </Button>
           </Stack>
           
@@ -287,9 +287,9 @@ export default function ProjectDetailPage() {
                 onClick={() => refreshSchemaMutation.mutate()}
                 disabled={refreshSchemaMutation.isPending}
                 sx={{ mt: 1 }}
-                title="Analyze schema from database"
+                title="Analyze schema from database collection"
               >
-                {refreshSchemaMutation.isPending ? 'Analyzing...' : 'Analyze from DB'}
+                {refreshSchemaMutation.isPending ? 'Analyzing...' : 'Analyze Schema'}
               </Button>
             </Box>
           )}

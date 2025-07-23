@@ -41,7 +41,19 @@ export class ProjectController {
           databaseName,
           collectionName
         });
-        schemaData = schemaResult.schema; // Extract schema from Go service response
+        
+        // Mark initial schema fields as database-analyzed
+        const rawSchema = schemaResult.schema;
+        schemaData = {} as any;
+        
+        for (const [fieldName, fieldData] of Object.entries(rawSchema)) {
+          schemaData[fieldName] = {
+            ...(fieldData as any),
+            source: 'database',
+            initialAnalysis: true,
+            analyzedAt: new Date().toISOString()
+          };
+        }
       } catch (error) {
         console.warn('Schema analysis failed during project creation:', error);
         // Continue without schema data
@@ -191,33 +203,45 @@ export class ProjectController {
       // Get current schema to preserve manually added fields
       const currentSchema = project.schemaData || {};
       
-      // Merge schemas: keep manually added fields + update existing fields with fresh data
-      const mergedSchema = { ...currentSchema };
-
-      // Update existing fields with fresh analysis data (but keep manually added ones)
-      for (const [fieldName, fieldData] of Object.entries(freshSchemaData)) {
-        // If the field exists in fresh schema, update it
-        // But preserve any manual modifications if they exist
-        if (currentSchema[fieldName]) {
-          // Field exists in both - merge the data
-          mergedSchema[fieldName] = {
-            ...fieldData, // Fresh analysis data
-            ...currentSchema[fieldName], // Keep any manual overrides
-            // Always update the type from fresh analysis as it's more reliable
-            type: (fieldData as any)?.type || (currentSchema[fieldName] as any)?.type
-          };
+      // Separate manually added fields from database-analyzed fields
+      const manualFields: any = {};
+      const dbFields: any = {};
+      
+      for (const [fieldName, fieldData] of Object.entries(currentSchema)) {
+        const field = fieldData as any;
+        if (field?.source === 'manual' || field?.addedViaSharedLink) {
+          // This is a manually added field - preserve it completely
+          manualFields[fieldName] = fieldData;
         } else {
-          // New field from database analysis
-          mergedSchema[fieldName] = fieldData;
+          // This is a database-analyzed field - can be updated
+          dbFields[fieldName] = fieldData;
+        }
+      }
+
+      // Merge schemas: keep all manually added fields + update with fresh DB analysis
+      const mergedSchema = {
+        ...manualFields, // Always preserve manually added fields
+        ...freshSchemaData // Add fresh analysis (will overwrite old DB fields but not manual ones)
+      };
+
+      // Mark fresh fields as database-analyzed
+      for (const [fieldName, fieldData] of Object.entries(freshSchemaData)) {
+        if (!manualFields[fieldName]) {
+          // Only update non-manual fields with source information
+          mergedSchema[fieldName] = {
+            ...(fieldData as any),
+            source: 'database',
+            lastAnalyzed: new Date().toISOString()
+          };
         }
       }
 
       console.log('🔗 Schema merge completed:', {
         projectId: id,
         freshFields: Object.keys(freshSchemaData),
-        currentFields: Object.keys(currentSchema),
+        manualFields: Object.keys(manualFields),
         mergedFields: Object.keys(mergedSchema),
-        preservedManualFields: Object.keys(currentSchema).filter(field => !(field in freshSchemaData)),
+        preservedManualFields: Object.keys(manualFields),
         timestamp: new Date().toISOString()
       });
 
@@ -229,7 +253,7 @@ export class ProjectController {
       res.status(200).json({
         success: true,
         data: updatedProject,
-        message: `Schema refreshed successfully. Preserved ${Object.keys(currentSchema).filter(field => !(field in freshSchemaData)).length} manually added fields.`
+        message: `Schema refreshed successfully. Preserved ${Object.keys(manualFields).length} manually added fields.`
       });
     } catch (error) {
       console.error('Schema refresh error:', error);

@@ -469,13 +469,25 @@ export class SharedLinkController {
       const result = await externalDatabaseService.addSchemaFields({
         databaseName: project.databaseName,
         collectionName: project.collectionName,
-        newFields
+        newFields,
+        mongoUri: project.mongoUri // Pass mongoUri for Go service notification
       });
 
       // Update the project's schema data in the database to persist changes
+      // Mark manually added fields with a source indicator
+      const processedNewFields: any = {};
+      for (const [fieldName, fieldData] of Object.entries(newFields)) {
+        processedNewFields[fieldName] = {
+          ...(fieldData as any),
+          source: 'manual', // Mark as manually added
+          addedAt: new Date().toISOString(),
+          addedViaSharedLink: true
+        };
+      }
+
       const updatedSchemaData = {
         ...project.schemaData,
-        ...newFields
+        ...processedNewFields
       };
 
       await authDb.updateProject(sharedLink.projectId, { schemaData: updatedSchemaData });
@@ -561,7 +573,8 @@ export class SharedLinkController {
       const result = await externalDatabaseService.removeSchemaField({
         databaseName: project.databaseName,
         collectionName: project.collectionName,
-        fieldName
+        fieldName,
+        mongoUri: project.mongoUri // Pass mongoUri for Go service notification
       });
 
       // Update the project's schema data in the database to persist changes
@@ -569,6 +582,12 @@ export class SharedLinkController {
       delete updatedSchemaData[fieldName];
 
       await authDb.updateProject(sharedLink.projectId, { schemaData: updatedSchemaData });
+
+      console.log('🗑️ Schema field removal initiated:', {
+        projectId: sharedLink.projectId,
+        removedField: fieldName,
+        fieldWasManual: project.schemaData?.[fieldName]?.source === 'manual' || project.schemaData?.[fieldName]?.addedViaSharedLink
+      });
 
       // Add a small delay to ensure database consistency  
       await new Promise(resolve => setTimeout(resolve, 100));
