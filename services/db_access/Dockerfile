@@ -1,17 +1,25 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
-# Install git and ca-certificates (needed for dependencies)
-RUN apk add --no-cache git ca-certificates
+# Install git, ca-certificates, and build tools
+RUN apk add --no-cache git ca-certificates tzdata gcc musl-dev
 
 # Set working directory
 WORKDIR /app
 
+# Set Go environment variables for better compatibility
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
 # Copy go mod files
 COPY go.mod go.sum ./
 
-# Download dependencies
-RUN go mod download
+# Download dependencies with verbose output and retry logic
+RUN go env GOPROXY && \
+    go mod download -x && \
+    go mod verify
 
 # Copy source code and config files
 COPY src src
@@ -19,7 +27,7 @@ COPY configs configs
 COPY main.go .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
+RUN go build -a -installsuffix cgo -o app .
 
 # Final stage - use alpine instead of scratch for TLS support
 FROM alpine:latest
