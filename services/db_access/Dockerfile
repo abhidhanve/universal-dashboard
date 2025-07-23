@@ -13,11 +13,10 @@ COPY go.mod go.sum ./
 # Download dependencies
 RUN go mod download
 
-# Copy source code
+# Copy source code and config files
 COPY src src
 COPY configs configs
 COPY main.go .
-COPY app.env .
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
@@ -36,7 +35,6 @@ WORKDIR /app
 
 # Copy the binary from builder stage
 COPY --from=builder /app/app .
-COPY --from=builder /app/app.env .
 
 # Change to non-root user
 USER appuser
