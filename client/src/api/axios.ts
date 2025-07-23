@@ -26,7 +26,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Don't force redirect here - let the auth context handle it
     }
     return Promise.reject(error);
   }

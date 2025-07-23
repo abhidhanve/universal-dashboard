@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Go Services Configuration
-const DB_ACCESS_SERVICE = 'http://localhost:9081';
+// Go Services Configuration - use Railway deployed service
+const DB_ACCESS_SERVICE = process.env.DB_ACCESS_SERVICE_URL || 'https://universal-panel-production.up.railway.app';
 
 // Helper function to properly encode MongoDB URI
 function encodeMongoUri(uri: string): string {

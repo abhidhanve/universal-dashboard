@@ -36,7 +36,7 @@ const LoginPage: React.FC = () => {
   // Redirect if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/projects', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -48,9 +48,18 @@ const LoginPage: React.FC = () => {
     try {
       await login(email, password);
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      // Don't navigate here - let the useEffect handle it
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || 'Login failed. Please try again.';
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

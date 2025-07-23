@@ -29,33 +29,31 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* Public routes */}
+      {/* Public routes - always accessible */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
       
       {/* Client access route (no auth needed) */}
       <Route path="/access/:token" element={<ClientAccessPage />} />
       
-      {/* Protected routes */}
-      <Route
-        path="/*"
-        element={
-          isAuthenticated ? (
-            <DashboardLayout>
-              <Routes>
-                <Route path="/" element={<Navigate to="/projects" replace />} />
-                <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="*" element={<Navigate to="/projects" replace />} />
-              </Routes>
-            </DashboardLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+      {/* Protected routes - only accessible when authenticated */}
+      {isAuthenticated ? (
+        <Route path="/*" element={
+          <DashboardLayout>
+            <Routes>
+              <Route path="/" element={<Navigate to="/projects" replace />} />
+              <Route path="/dashboard" element={<Navigate to="/projects" replace />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="*" element={<Navigate to="/projects" replace />} />
+            </Routes>
+          </DashboardLayout>
+        } />
+      ) : (
+        /* Redirect unauthenticated users to login for protected routes */
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      )}
     </Routes>
   );
 };
