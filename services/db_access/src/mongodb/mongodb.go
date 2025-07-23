@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"reflect"
 
@@ -26,7 +27,17 @@ func GetClient() *mongo.Client {
 func ConnectWithURI(mongoURI string) (*mongo.Client, error) {
 	tM := reflect.TypeOf(bson.M{})
 	reg := bson.NewRegistryBuilder().RegisterTypeMapEntry(bsontype.EmbeddedDocument, tM).Build()
-	clientOptions := options.Client().ApplyURI(mongoURI).SetRegistry(reg)
+
+	// Configure TLS for MongoDB Atlas compatibility
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false, // Keep TLS verification enabled for security
+	}
+
+	// Configure client options with TLS settings for MongoDB Atlas compatibility
+	clientOptions := options.Client().
+		ApplyURI(mongoURI).
+		SetRegistry(reg).
+		SetTLSConfig(tlsConfig)
 
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	if err != nil {
