@@ -1,0 +1,58 @@
+services:
+  # Go Microservice for Database Access
+  - type: web
+    name: universal-panel-go-service
+    env: docker
+    dockerfilePath: ./services/db_access/Dockerfile
+    dockerContext: ./services/db_access
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      - key: PORT
+        value: 9081
+      - key: AES_KEY
+        value: your32characteraessecretkey12345
+      - key: AES_IV
+        value: your16chariv123
+      - key: LOG_LEVEL
+        value: info
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /ping
+    numInstances: 1
+    
+  # Node.js Main Server (using Bun runtime)
+  - type: web
+    name: universal-panel-node-server
+    env: node
+    buildCommand: cd server && curl -fsSL https://bun.sh/install | bash && export PATH="$HOME/.bun/bin:$PATH" && bun install && bun run build
+    startCommand: cd server && export PATH="$HOME/.bun/bin:$PATH" && bun run start
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        value: your-super-secret-jwt-key-change-this-in-production
+      - key: DB_ACCESS_SERVICE
+        value: https://universal-panel-go-service.onrender.com
+      - key: DATABASE_URL
+        # Add your PostgreSQL connection string here
+        value: postgresql://username:password@hostname:port/database
+    healthCheckPath: /health
+    numInstances: 1
+
+databases:
+  # PostgreSQL Database for Authentication
+  - name: universal-panel-postgres
+    databaseName: universal_panel
+    user: admin
+    plan: free
+    region: oregon
