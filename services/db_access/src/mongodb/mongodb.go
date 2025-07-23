@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"log"
 	"reflect"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
@@ -28,15 +29,18 @@ func ConnectWithURI(mongoURI string) (*mongo.Client, error) {
 	tM := reflect.TypeOf(bson.M{})
 	reg := bson.NewRegistryBuilder().RegisterTypeMapEntry(bsontype.EmbeddedDocument, tM).Build()
 
-	// Configure TLS for MongoDB Atlas compatibility
+	// Railway deployment compatibility: Use more permissive TLS config
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false, // Keep TLS verification enabled for security
+		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS12,
+		MaxVersion:         tls.VersionTLS13,
 	}
 
-	// Configure client options with TLS settings for MongoDB Atlas compatibility
 	clientOptions := options.Client().
 		ApplyURI(mongoURI).
 		SetRegistry(reg).
+		SetConnectTimeout(30 * time.Second).
+		SetServerSelectionTimeout(30 * time.Second).
 		SetTLSConfig(tlsConfig)
 
 	client, err := mongo.Connect(context.TODO(), clientOptions)

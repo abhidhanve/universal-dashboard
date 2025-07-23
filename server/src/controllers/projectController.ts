@@ -175,15 +175,20 @@ export class ProjectController {
       console.log('🔄 Schema refresh started:', {
         projectId: id,
         currentSchema: Object.keys(project.schemaData || {}),
+        mongoUri: project.mongoUri ? 'Present' : 'Missing',
+        databaseName: project.databaseName,
+        collectionName: project.collectionName,
         timestamp: new Date().toISOString()
       });
 
       // Re-analyze schema from MongoDB
+      console.log('📞 Calling Go service for schema analysis...');
       const schemaResult = await externalDatabaseService.analyzeSchema({
         mongoUri: project.mongoUri,
         databaseName: project.databaseName,
         collectionName: project.collectionName
       });
+      console.log('✅ Go service responded successfully');
 
       // Extract schema data from Go service response
       const freshSchemaData = schemaResult.schema;
@@ -232,7 +237,13 @@ export class ProjectController {
         message: `Schema refreshed successfully. Preserved ${Object.keys(currentSchema).filter(field => !(field in freshSchemaData)).length} manually added fields.`
       });
     } catch (error) {
-      console.error('Schema refresh error:', error);
+      console.error('❌ Schema refresh error details:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        projectId: req.params.id,
+        timestamp: new Date().toISOString()
+      });
       res.status(500).json({
         error: 'Schema refresh failed',
         message: error instanceof Error ? error.message : 'Unknown error'

@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.19-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Install git and ca-certificates (needed for dependencies)
 RUN apk add --no-cache git ca-certificates
@@ -14,27 +14,28 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY src src
+COPY configs configs
+COPY main.go .
+COPY app.env .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
 
-# Final stage
+# Final stage - use alpine instead of scratch for TLS support
 FROM alpine:latest
 
-# Install ca-certificates for HTTPS requests
+# Install ca-certificates for HTTPS/TLS requests (crucial for MongoDB Atlas)
 RUN apk --no-cache add ca-certificates
 
 # Create non-root user
 RUN adduser -D -s /bin/sh appuser
 
 # Set working directory
-WORKDIR /root/
+WORKDIR /app
 
 # Copy the binary from builder stage
-COPY --from=builder /app/main .
-
-# Copy app.env file
+COPY --from=builder /app/app .
 COPY --from=builder /app/app.env .
 
 # Change to non-root user
@@ -48,15 +49,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:9081/ping || exit 1
 
 # Run the application
-CMD ["./main"]
-COPY src src
-COPY configs configs
-
-RUN go build -o app
-
-
-FROM scratch 
-
-COPY --from=BUILD_IMAGE /app/app /
-
-CMD [ "/app" ]
+CMD ["./app"]
